@@ -56,14 +56,14 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Brand */}
         <div className="flex items-center h-16 px-5 border-b shrink-0" style={{ borderColor: 'var(--sidebar-border)' }}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0ea89a] to-[#2ec4b6] flex items-center justify-center shrink-0 shadow-lg shadow-[#0ea89a]/20">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="w-8 h-8 rounded-lg bg-[#3b82f6] flex items-center justify-center shrink-0">
+              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
             </div>
             <div className={`overflow-hidden transition-all duration-300 ${collapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-              <p className="text-sm font-bold tracking-tight" style={{ color: 'var(--sidebar-text-active)' }}>Alyssa Wellness</p>
-              <p className="text-[10px] font-medium -mt-0.5" style={{ color: 'var(--sidebar-text)' }}>Medical Clinic</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--sidebar-text-active)' }}>Alyssa Wellness</p>
+              <p className="text-[10px]" style={{ color: 'var(--sidebar-text)' }}>Medical Clinic</p>
             </div>
           </div>
           <button onClick={onToggle} className="lg:hidden ml-auto" style={{ color: 'var(--sidebar-text)' }}>&times;</button>
@@ -92,7 +92,6 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   return {
                     color: active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)',
                     background: active ? 'var(--sidebar-active)' : 'transparent',
-                    borderLeftColor: active ? 'var(--sidebar-active-border)' : 'transparent',
                   };
                 }}
               >
