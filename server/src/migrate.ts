@@ -12,8 +12,10 @@ async function migrate() {
   await client.connect();
   console.log('Connected.\n');
 
-  // Execute schema SQL as batch
-  const sql = fs.readFileSync(path.join(__dirname, 'migrate.sql'), 'utf8');
+  // Execute schema SQL as batch — works from both src/ (tsx) and dist/ (production)
+  let sqlPath = path.join(__dirname, 'migrate.sql');
+  if (!fs.existsSync(sqlPath)) sqlPath = path.join(__dirname, '..', 'src', 'migrate.sql');
+  const sql = fs.readFileSync(sqlPath, 'utf8');
   try {
     await client.query(sql);
     console.log('✓ Schema and seed data applied');

@@ -20,7 +20,14 @@ import reminderRoutes from './routes/reminders';
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-app.use(cors({ origin: ['http://localhost:5173', 'http://localhost:4173'], credentials: true }));
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:4173',
+    process.env.CLIENT_URL,
+  ].filter((x): x is string => !!x),
+  credentials: true,
+}));
 app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 

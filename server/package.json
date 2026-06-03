@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "tsc && node -e \"require('fs').copyFileSync('src/migrate.sql','dist/migrate.sql')\"",
+    "start": "node dist/migrate.js && node dist/index.js",
     "migrate": "tsx src/migrate.ts",
     "clear-data": "tsx src/clear-data.ts"
   },
