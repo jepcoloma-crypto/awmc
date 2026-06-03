@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import apiClient from '@/api/client';
 import { Table, Button, SelectPicker, DatePicker, Tag, Notification, useToaster } from 'rsuite';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, toLocalDateString } from '@/lib/utils';
 import type { Appointment, Invoice, Payment } from '@/types';
 
 const { Column, Cell } = Table;
 
-type ReportType = 'appointments' | 'patients' | 'financial' | 'outstanding';
+type ReportType = 'appointments' | 'patients' | 'financial' | 'outstanding' | 'cashier-audit';
 
 export default function ReportsPage() {
   const toaster = useToaster();
@@ -16,9 +16,12 @@ export default function ReportsPage() {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState('');
+  const [groupBy, setGroupBy] = useState('daily');
+  const [auditData, setAuditData] = useState<any>(null);
 
   const generateReport = async () => {
     setLoading(true);
+    setAuditData(null);
     try {
       if (reportType === 'appointments') {
         const res = await apiClient.get('/reports/appointments', { params: { from: fromDate || '2026-01-01', to: toDate || '2026-12-31' } });
@@ -42,6 +45,12 @@ export default function ReportsPage() {
         setData(outstanding);
         const totalOutstanding = outstanding.reduce((s: number, i: Invoice) => s + parseFloat(String(i.balance)), 0);
         setSummary(`Total outstanding: ${formatCurrency(totalOutstanding)} | Accounts: ${outstanding.length}`);
+      } else if (reportType === 'cashier-audit') {
+        const res = await apiClient.get('/reports/cashier-audit', {
+          params: { from: fromDate || '2026-01-01', to: toDate || '2026-12-31', groupBy }
+        });
+        setAuditData(res.data);
+        setSummary(`Grand total: ${formatCurrency(res.data.grand_total)} | Periods: ${res.data.summary.length}`);
       }
     } catch {
       toaster.push(<Notification type="error" header="Error">Failed to generate report</Notification>, { placement: 'topEnd' });
@@ -64,6 +73,8 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const groupedByLabel = groupBy === 'weekly' ? 'Week Starting' : groupBy === 'monthly' ? 'Month' : 'Date';
+
   return (
     <div className="space-y-5">
       <div>
@@ -81,28 +92,80 @@ export default function ReportsPage() {
                 { label: 'Patient Report', value: 'patients' },
                 { label: 'Financial Report', value: 'financial' },
                 { label: 'Outstanding Balances', value: 'outstanding' },
+                { label: 'Cashier Audit', value: 'cashier-audit' },
               ]}
               value={reportType}
-              onChange={(v) => { setReportType(v as ReportType); setData([]); setSummary(''); }}
+              onChange={(v) => { setReportType(v as ReportType); setData([]); setSummary(''); setAuditData(null); }}
               className="w-full"
               searchable={false}
             />
           </div>
           <div className="w-44">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">From</label>
-            <DatePicker className="w-full" value={fromDate ? new Date(fromDate) : null} onChange={(v) => setFromDate(v ? v.toISOString().split('T')[0] : '')} oneTap />
+            <DatePicker className="w-full" value={fromDate ? new Date(fromDate) : null} onChange={(v) => setFromDate(v ? toLocalDateString(v) : '')} oneTap />
           </div>
           <div className="w-44">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">To</label>
-            <DatePicker className="w-full" value={toDate ? new Date(toDate) : null} onChange={(v) => setToDate(v ? v.toISOString().split('T')[0] : '')} oneTap />
+            <DatePicker className="w-full" value={toDate ? new Date(toDate) : null} onChange={(v) => setToDate(v ? toLocalDateString(v) : '')} oneTap />
           </div>
+          {reportType === 'cashier-audit' && (
+            <div className="w-40">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group By</label>
+              <SelectPicker
+                data={[
+                  { label: 'Daily', value: 'daily' },
+                  { label: 'Weekly', value: 'weekly' },
+                  { label: 'Monthly', value: 'monthly' },
+                ]}
+                value={groupBy}
+                onChange={(v) => setGroupBy(v || 'daily')}
+                className="w-full"
+                searchable={false}
+                cleanable={false}
+              />
+            </div>
+          )}
           <Button appearance="primary" onClick={generateReport} loading={loading}>Generate</Button>
           {data.length > 0 && <Button appearance="default" onClick={exportCSV}>Export CSV</Button>}
         </div>
         {summary && <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">{summary}</p>}
       </div>
 
-      {data.length > 0 && (
+      {auditData && (
+        <div className="space-y-4">
+          <div className="wellness-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50">Cashier Collection Summary ({groupBy})</h3>
+              <span className="text-sm font-bold text-[#0b6e4f]">{formatCurrency(auditData.grand_total)}</span>
+            </div>
+            <Table data={auditData.summary} autoHeight rowHeight={48}>
+              <Column width={140}><Table.HeaderCell>{groupedByLabel}</Table.HeaderCell><Cell>{(r: any) => {
+                if (groupBy === 'weekly') { const d = new Date(r.period); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`; }
+                if (groupBy === 'monthly') { const d = new Date(r.period + '-01'); return d.toLocaleString('en-US', { month: 'short', year: 'numeric' }); }
+                return r.period;
+              }}</Cell></Column>
+              <Column width={180}><Table.HeaderCell>Cashier</Table.HeaderCell><Cell>{(r: any) => <span className="font-medium">{r.cashier_name || 'Unknown'}</span>}</Cell></Column>
+              <Column width={120} align="right"><Table.HeaderCell>Transactions</Table.HeaderCell><Cell>{(r: any) => r.transaction_count}</Cell></Column>
+              <Column width={160} align="right"><Table.HeaderCell>Total Collected</Table.HeaderCell><Cell>{(r: any) => <span className="font-semibold text-green-700">{formatCurrency(r.total_collected)}</span>}</Cell></Column>
+            </Table>
+          </div>
+
+          <div className="wellness-card p-4">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50 mb-3">Transaction Details</h3>
+            <Table data={auditData.details} autoHeight rowHeight={48}>
+              <Column width={140}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: any) => formatDate(r.payment_date)}</Cell></Column>
+              <Column width={130}><Table.HeaderCell>Invoice #</Table.HeaderCell><Cell>{(r: any) => <span className="font-mono text-sm">{r.invoice_number}</span>}</Cell></Column>
+              <Column width={180}><Table.HeaderCell>Patient</Table.HeaderCell><Cell>{(r: any) => <span className="font-medium">{r.patient_name}</span>}</Cell></Column>
+              <Column width={130} align="right"><Table.HeaderCell>Amount</Table.HeaderCell><Cell>{(r: any) => <span className="font-medium">{formatCurrency(r.amount)}</span>}</Cell></Column>
+              <Column width={110}><Table.HeaderCell>Method</Table.HeaderCell><Cell>{(r: any) => r.payment_method}</Cell></Column>
+              <Column width={160}><Table.HeaderCell>Reference</Table.HeaderCell><Cell>{(r: any) => r.reference_number || '—'}</Cell></Column>
+              <Column width={160}><Table.HeaderCell>Cashier</Table.HeaderCell><Cell>{(r: any) => r.cashier_name || '—'}</Cell></Column>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {data.length > 0 && !auditData && (
         <div className="wellness-card p-4">
           {reportType === 'appointments' && (
             <Table data={data} autoHeight rowHeight={48}>
@@ -117,9 +180,12 @@ export default function ReportsPage() {
           {reportType === 'financial' && (
             <Table data={data} autoHeight rowHeight={48}>
               <Column width={160}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: Payment) => formatDate(r.payment_date)}</Cell></Column>
+              <Column width={140}><Table.HeaderCell>Invoice #</Table.HeaderCell><Cell>{(r: any) => <span className="font-mono text-sm">{r.invoice_number}</span>}</Cell></Column>
+              <Column width={180}><Table.HeaderCell>Patient</Table.HeaderCell><Cell>{(r: any) => <span className="font-medium">{r.patient_name}</span>}</Cell></Column>
               <Column width={140} align="right"><Table.HeaderCell>Amount</Table.HeaderCell><Cell>{(r: Payment) => <span className="font-medium">{formatCurrency(r.amount)}</span>}</Cell></Column>
-              <Column width={140}><Table.HeaderCell>Method</Table.HeaderCell><Cell>{(r: Payment) => r.payment_method}</Cell></Column>
-              <Column width={200} flexGrow={1}><Table.HeaderCell>Reference</Table.HeaderCell><Cell>{(r: Payment) => r.reference_number || '—'}</Cell></Column>
+              <Column width={120}><Table.HeaderCell>Method</Table.HeaderCell><Cell>{(r: Payment) => r.payment_method}</Cell></Column>
+              <Column width={160} flexGrow={1}><Table.HeaderCell>Reference</Table.HeaderCell><Cell>{(r: Payment) => r.reference_number || '—'}</Cell></Column>
+              <Column width={160}><Table.HeaderCell>Processed By</Table.HeaderCell><Cell>{(r: any) => <span className="text-gray-700 dark:text-gray-300">{r.processed_by || '—'}</span>}</Cell></Column>
             </Table>
           )}
           {reportType === 'patients' && (

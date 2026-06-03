@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, Input, SelectPicker } from 'rsuite';
+import { Table, Tag, Button, IconButton, Input, SelectPicker, Modal, Notification, useToaster } from 'rsuite';
+import { EyeRound, Trash } from '@rsuite/icons';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { canAccess } from '@/lib/permissions';
@@ -16,6 +17,8 @@ export default function BillingList() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const toaster = useToaster();
+  const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
 
   useEffect(() => {
     loadInvoices();
@@ -34,6 +37,18 @@ export default function BillingList() {
       setInvoices(data);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await apiClient.delete(`/billing/${deleteTarget.id}`);
+      toaster.push(<Notification type="success" header="Deleted">Invoice deleted</Notification>, { placement: 'topEnd' });
+      setDeleteTarget(null);
+      loadInvoices();
+    } catch {
+      toaster.push(<Notification type="error" header="Error">Failed to delete invoice</Notification>, { placement: 'topEnd' });
     }
   };
 
@@ -100,8 +115,27 @@ export default function BillingList() {
           <Column width={150}><Table.HeaderCell>Status</Table.HeaderCell><Cell>{(r: Invoice) => (
             <span className="block"><Tag color={r.status === 'Paid' ? 'green' : r.status === 'Partial' ? 'yellow' : r.status === 'Overdue' ? 'red' : 'orange'}>{r.status}</Tag></span>
           )}</Cell></Column>
+          <Column width={160}><Table.HeaderCell>Processed By</Table.HeaderCell><Cell>{(r: any) => <span className="block text-gray-700 dark:text-gray-300 truncate">{r.processed_by || '—'}</span>}</Cell></Column>
+          <Column width={100} align="center"><Table.HeaderCell>Actions</Table.HeaderCell><Cell>{(r: Invoice) => (
+            <div className="flex gap-1 justify-center">
+              <IconButton size="sm" appearance="subtle" icon={<EyeRound style={{ color: '#0b6e4f' }} />} onClick={(e) => { e.stopPropagation(); navigate(`/billing/${r.id}`); }} />
+              {user?.role === 'Administrator' && (
+                <IconButton size="sm" appearance="subtle" icon={<Trash style={{ color: '#e53e3e' }} />} onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} />
+              )}
+            </div>
+          )}</Cell></Column>
         </Table>
       </div>
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} size="xs">
+        <Modal.Header><Modal.Title>Delete Invoice</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <p>Are you sure you want to delete invoice <strong>{deleteTarget?.invoice_number}</strong>? This cannot be undone.</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button className="btn-wellness" onClick={handleDelete}>Delete</Button>
+          <Button appearance="subtle" onClick={() => setDeleteTarget(null)}>Cancel</Button>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

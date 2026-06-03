@@ -137,6 +137,13 @@ CREATE TABLE IF NOT EXISTS patient_procedures (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS patient_doctors (
+  id SERIAL PRIMARY KEY,
+  patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
+  UNIQUE(patient_id, doctor_id)
+);
+
 CREATE TABLE IF NOT EXISTS reminders (
   id SERIAL PRIMARY KEY,
   patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
@@ -194,7 +201,7 @@ INSERT INTO procedure_types (name, description, price) VALUES
   ('Vaccination', 'Administer vaccine', 200),
   ('Biopsy', 'Tissue sampling', 1500),
   ('Skin Prick Test', 'Allergy testing', 800)
-ON CONFLICT DO NOTHING;
+ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO services (name, description, price, category) VALUES
   ('General Consultation', 'Standard medical consultation', 500, 'Consultation'),
@@ -207,7 +214,7 @@ INSERT INTO services (name, description, price, category) VALUES
   ('Blood Pressure Monitoring', '24-hour ambulatory BP monitoring', 1500, 'Diagnostic'),
   ('Health Certificate', 'Medical clearance certificate', 300, 'Others'),
   ('Teleconsultation', 'Online video consultation', 400, 'Consultation')
-ON CONFLICT DO NOTHING;
+ON CONFLICT (name) DO NOTHING;
 
 INSERT INTO doctors (first_name, last_name, specialization, phone, email, status) VALUES
   ('Maria', 'Santos', 'General Medicine', '09171234567', 'maria.santos@clinic.com', 'Active'),

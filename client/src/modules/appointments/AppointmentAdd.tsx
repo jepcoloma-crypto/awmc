@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
 import { Button, Input, SelectPicker, DatePicker, Notification, useToaster } from 'rsuite';
 import { useAuth } from '@/contexts/AuthContext';
+import { toLocalDateString } from '@/lib/utils';
 import type { Patient, Doctor } from '@/types';
 
 export default function AppointmentAdd() {
@@ -91,7 +92,7 @@ export default function AppointmentAdd() {
             <DatePicker
               className="w-full"
               value={form.appointment_date ? new Date(form.appointment_date) : null}
-              onChange={(v) => setForm({ ...form, appointment_date: v ? v.toISOString().split('T')[0] : '' })}
+              onChange={(v) => setForm({ ...form, appointment_date: v ? toLocalDateString(v) : '' })}
               oneTap
             />
           </FormField>

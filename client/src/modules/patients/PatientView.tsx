@@ -1,52 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, Modal, Input, SelectPicker, DatePicker, Notification, useToaster } from 'rsuite';
-import { calculateAge, formatDate, formatCurrency } from '@/lib/utils';
-import type { Patient, PatientProcedure, ProcedureType } from '@/types';
+import { Table, Tag, Button } from 'rsuite';
+import { calculateAge, formatDate, formatDateDDMMYYYY, formatTimeHHMM } from '@/lib/utils';
+import type { Patient, Appointment } from '@/types';
 
 const { Column, Cell } = Table;
 
 export default function PatientView() {
   const { id } = useParams();
-  const toaster = useToaster();
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [procedures, setProcedures] = useState<PatientProcedure[]>([]);
-  const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddProcedure, setShowAddProcedure] = useState(false);
-  const [procForm, setProcForm] = useState({ procedure_type_id: '', procedure_date: '', notes: '', fee: 0, doctor_id: 1 });
 
   useEffect(() => {
-    loadPatient();
-    apiClient.get('/procedure-types').then((r) => setProcedureTypes(r.data.data));
-  }, [id]);
-
-  const loadPatient = async () => {
-    try {
-      const res = await apiClient.get(`/patients/${id}`);
+    apiClient.get(`/patients/${id}`).then((res) => {
       setPatient(res.data);
-      setProcedures(res.data.procedures || []);
-    } finally {
+      setAppointments(res.data.appointments || []);
       setLoading(false);
-    }
-  };
-
-  const handleAddProcedure = async () => {
-    try {
-      const procType = procedureTypes.find((pt) => pt.id === Number(procForm.procedure_type_id));
-      await apiClient.post(`/patients/${id}/procedures`, {
-        ...procForm,
-        procedure_type_id: Number(procForm.procedure_type_id),
-        fee: procType?.price || 0,
-      });
-      toaster.push(<Notification type="success" header="Success">Procedure added</Notification>, { placement: 'topEnd' });
-      setShowAddProcedure(false);
-      loadPatient();
-    } catch {
-      toaster.push(<Notification type="error" header="Error">Failed to add procedure</Notification>, { placement: 'topEnd' });
-    }
-  };
+    });
+  }, [id]);
 
   if (loading) return <div className="text-center py-12 text-gray-500 dark:text-gray-400">Loading...</div>;
   if (!patient) return <div className="text-center py-12 text-gray-500 dark:text-gray-400">Patient not found</div>;
@@ -85,6 +58,7 @@ export default function PatientView() {
             <InfoRow label="Phone" value={patient.phone} />
             <InfoRow label="Email" value={patient.email || '—'} />
             <InfoRow label="Address" value={patient.address || '—'} />
+            <InfoRow label="Assigned Doctors" value={patient.doctors && patient.doctors.length > 0 ? patient.doctors.map((d: any) => `Dr. ${d.first_name} ${d.last_name}`).join(', ') : '—'} />
           </div>
         </div>
       </div>
@@ -106,59 +80,25 @@ export default function PatientView() {
 
       <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Procedures</h4>
-          <Button appearance="primary" size="sm" onClick={() => setShowAddProcedure(true)}>+ Add Procedure</Button>
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Appointment History</h4>
         </div>
-        <Table data={procedures} autoHeight rowHeight={48}>
-          <Column width={100}>
-            <Table.HeaderCell>Date</Table.HeaderCell>
-            <Cell>{(rowData: PatientProcedure) => formatDate(rowData.procedure_date)}</Cell>
-          </Column>
-          <Column width={160}>
-            <Table.HeaderCell>Procedure</Table.HeaderCell>
-            <Cell>{(rowData: PatientProcedure) => procedureTypes.find((pt) => pt.id === rowData.procedure_type_id)?.name || 'Unknown'}</Cell>
-          </Column>
-          <Column width={200} flexGrow={1}>
-            <Table.HeaderCell>Notes</Table.HeaderCell>
-            <Cell>{(rowData: PatientProcedure) => rowData.notes}</Cell>
-          </Column>
-          <Column width={100}>
-            <Table.HeaderCell>Fee</Table.HeaderCell>
-            <Cell>{(rowData: PatientProcedure) => formatCurrency(rowData.fee)}</Cell>
-          </Column>
+        <Table data={appointments} autoHeight rowHeight={48}>
+          <Column width={100}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: Appointment) => formatDateDDMMYYYY(r.appointment_date)}</Cell></Column>
+          <Column width={80}><Table.HeaderCell>Time</Table.HeaderCell><Cell>{(r: Appointment) => formatTimeHHMM(r.appointment_time)}</Cell></Column>
+          <Column width={180}><Table.HeaderCell>Doctor</Table.HeaderCell><Cell>{(r: Appointment) => r.doctor_name}</Cell></Column>
+          <Column width={160} flexGrow={1}><Table.HeaderCell>Reason</Table.HeaderCell><Cell>{(r: Appointment) => r.reason}</Cell></Column>
+          <Column width={100}><Table.HeaderCell>Status</Table.HeaderCell><Cell>{(r: Appointment) => (
+            <Tag color={
+              r.status === 'Completed' ? 'green' :
+              r.status === 'Scheduled' ? 'blue' :
+              r.status === 'Confirmed' ? 'cyan' :
+              r.status === 'In Progress' ? 'orange' :
+              r.status === 'Cancelled' ? 'red' : 'violet'
+            }>{r.status}</Tag>
+          )}</Cell></Column>
         </Table>
       </div>
 
-      <Modal open={showAddProcedure} onClose={() => setShowAddProcedure(false)}>
-        <Modal.Header>
-          <Modal.Title>Add Procedure</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Procedure Type</label>
-              <SelectPicker
-                data={procedureTypes.map((pt) => ({ label: `${pt.name} (${formatCurrency(pt.price)})`, value: pt.id }))}
-                value={procForm.procedure_type_id as any}
-                onChange={(v) => setProcForm({ ...procForm, procedure_type_id: v as any, fee: procedureTypes.find((pt) => pt.id === v)?.price || 0 })}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Date</label>
-              <DatePicker className="w-full" value={procForm.procedure_date ? new Date(procForm.procedure_date) : null} onChange={(v) => setProcForm({ ...procForm, procedure_date: v ? v.toISOString().split('T')[0] : '' })} oneTap />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Notes</label>
-              <Input as="textarea" rows={3} value={procForm.notes} onChange={(v) => setProcForm({ ...procForm, notes: v })} />
-            </div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button appearance="primary" onClick={handleAddProcedure}>Add</Button>
-          <Button appearance="default" onClick={() => setShowAddProcedure(false)}>Cancel</Button>
-        </Modal.Footer>
-      </Modal>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import apiClient from '@/api/client';
 import { Table, Tag, Button, Modal, Input, SelectPicker, Notification, useToaster } from 'rsuite';
-import { formatDate } from '@/lib/utils';
-import type { Reminder, Patient } from '@/types';
+import { formatDate, formatTimeHHMM } from '@/lib/utils';
+import type { Reminder, Patient, Appointment } from '@/types';
 
 const { Column, Cell } = Table;
 
@@ -10,15 +10,17 @@ export default function RemindersPage() {
   const toaster = useToaster();
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ patient_id: null as number | null, type: 'Manual' as string, message: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([apiClient.get('/reminders'), apiClient.get('/patients')]).then(([rRes, pRes]) => {
+    Promise.all([apiClient.get('/reminders'), apiClient.get('/patients'), apiClient.get('/reminders/today-scheduled')]).then(([rRes, pRes, tRes]) => {
       setReminders(rRes.data.data);
       setPatients(pRes.data.data);
+      setTodayAppointments(tRes.data.data);
       setLoading(false);
     });
   }, []);
@@ -58,7 +60,24 @@ export default function RemindersPage() {
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
             Today's Patients
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400">No appointments scheduled for today.</p>
+          {todayAppointments.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400">No appointments scheduled for today.</p>
+          ) : (
+            <div className="space-y-2 mt-2">
+              {todayAppointments.map((a) => (
+                <div key={a.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{a.patient_name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{a.doctor_name}</p>
+                  </div>
+                  <div className="flex items-center gap-2 ml-3">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">{formatTimeHHMM(a.appointment_time)}</span>
+                    <Tag size="sm" color={a.status === 'Confirmed' ? 'blue' : 'yellow'}>{a.status}</Tag>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="wellness-card p-5">

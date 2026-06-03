@@ -144,25 +144,6 @@ export default function LoginPage() {
                 'Sign In'
               )}
             </button>
-
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 text-center">Demo Credentials</p>
-              <div className="space-y-1.5 text-xs">
-                {[
-                  { user: 'admin', role: 'Administrator' },
-                  { user: 'doctor1', role: 'Medical Practitioner' },
-                  { user: 'receptionist', role: 'Front Desk Staff' },
-                  { user: 'cashier', role: 'Cashier' },
-                ].map((c) => (
-                  <div key={c.user} className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700/50 cursor-pointer transition-colors" onClick={() => { setUsername(c.user); setPassword('admin123'); }}>
-                    <span className="font-mono text-sm text-gray-700 dark:text-gray-300">{c.user}</span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">/ admin123</span>
-                    <span className="text-gray-400 dark:text-gray-500 mx-1">·</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">{c.role}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
           </form>
         </div>
       </div>

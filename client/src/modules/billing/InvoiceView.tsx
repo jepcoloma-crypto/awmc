@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, Modal, Input, SelectPicker, Notification, useToaster } from 'rsuite';
+import { Table, Tag, Button, Modal, Input, SelectPicker, Notification, useToaster, IconButton } from 'rsuite';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { Invoice, Payment } from '@/types';
+import { Trash, Plus } from '@rsuite/icons';
 
 const { Column, Cell } = Table;
 
@@ -17,9 +18,22 @@ export default function InvoiceView() {
   const [showPayment, setShowPayment] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: 0, payment_method: 'Cash' as string, reference_number: '' });
 
+  // Edit items modal state
+  const [showEdit, setShowEdit] = useState(false);
+  const [editItems, setEditItems] = useState<any[]>([]);
+  const [services, setServices] = useState<any[]>([]);
+  const [selectedService, setSelectedService] = useState<number | null>(null);
+  const [showDoctorFeeModal, setShowDoctorFeeModal] = useState(false);
+  const [doctorFeeForm, setDoctorFeeForm] = useState({ doctorId: '', doctorName: '', amount: 0 });
+  const [patientDoctors, setPatientDoctors] = useState<any[]>([]);
+  const [showMedicineModal, setShowMedicineModal] = useState(false);
+  const [medicineForm, setMedicineForm] = useState({ name: '', quantity: 1, unitPrice: 0 });
+  const [saving, setSaving] = useState(false);
+
   useEffect(() => {
     loadInvoice();
     apiClient.get('/settings').then((res) => setSettings(res.data)).catch(() => {});
+    apiClient.get('/services').then((res) => setServices(res.data.data || res.data)).catch(() => {});
   }, [id]);
 
   const loadInvoice = async () => {
@@ -45,6 +59,79 @@ export default function InvoiceView() {
     }
   };
 
+  const openEdit = () => {
+    setEditItems(JSON.parse(JSON.stringify(invoice?.items || [])));
+    setShowEdit(true);
+    if (invoice?.patient_id) {
+      apiClient.get(`/patients/${invoice.patient_id}`).then((res) => {
+        setPatientDoctors(res.data.doctors || []);
+      }).catch(() => setPatientDoctors([]));
+    }
+  };
+
+  const handleAddService = () => {
+    if (!selectedService) return;
+    const svc = services.find((s: any) => s.id === selectedService);
+    if (!svc) return;
+    setEditItems([...editItems, {
+      service_id: svc.id,
+      description: svc.name,
+      quantity: 1,
+      unit_price: Number(svc.price),
+      total: Number(svc.price)
+    }]);
+    setSelectedService(null);
+  };
+
+  const handleAddDoctorFee = () => {
+    if (!doctorFeeForm.doctorId || doctorFeeForm.amount <= 0) return;
+    const doctor = patientDoctors.find((d: any) => String(d.id) === doctorFeeForm.doctorId);
+    const name = doctor ? `${doctor.first_name} ${doctor.last_name}` : doctorFeeForm.doctorName;
+    setEditItems([...editItems, {
+      service_id: null,
+      description: `Professional Fee - Dr. ${name}`,
+      quantity: 1,
+      unit_price: doctorFeeForm.amount,
+      total: doctorFeeForm.amount
+    }]);
+    setShowDoctorFeeModal(false);
+    setDoctorFeeForm({ doctorId: '', doctorName: '', amount: 0 });
+  };
+
+  const handleAddMedicine = () => {
+    if (!medicineForm.name || medicineForm.quantity <= 0 || medicineForm.unitPrice <= 0) return;
+    const total = medicineForm.quantity * medicineForm.unitPrice;
+    setEditItems([...editItems, {
+      service_id: null,
+      description: `Medicine: ${medicineForm.name}`,
+      quantity: medicineForm.quantity,
+      unit_price: medicineForm.unitPrice,
+      total
+    }]);
+    setShowMedicineModal(false);
+    setMedicineForm({ name: '', quantity: 1, unitPrice: 0 });
+  };
+
+  const handleRemoveItem = (index: number) => {
+    setEditItems(editItems.filter((_, i) => i !== index));
+  };
+
+  const handleSaveItems = async () => {
+    setSaving(true);
+    try {
+      await apiClient.put(`/billing/${id}`, { items: editItems });
+      toaster.push(<Notification type="success" header="Success">Invoice items updated</Notification>, { placement: 'topEnd' });
+      setShowEdit(false);
+      loadInvoice();
+    } catch {
+      toaster.push(<Notification type="error" header="Error">Failed to update invoice</Notification>, { placement: 'topEnd' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const editSubtotal = editItems.reduce((s: number, i: any) => s + Number(i.total), 0);
+
   const handlePrint = () => {
     if (!invoice) return;
     const win = window.open('', '_blank');
@@ -54,38 +141,73 @@ export default function InvoiceView() {
     const clinicPhone = settings.clinic_phone || '';
     const clinicEmail = settings.clinic_email || '';
 
-    const itemsHtml = (invoice.items || []).map((item: any) => `
-      <tr>
+    const items = invoice.items || [];
+    const services = items.filter((i: any) => i.service_id);
+    const professionalFees = items.filter((i: any) => !i.service_id && i.description.startsWith('Professional Fee'));
+    const meds = items.filter((i: any) => !i.service_id && i.description.startsWith('Medicine:'));
+    const procs = items.filter((i: any) => !i.service_id && !i.description.startsWith('Professional Fee') && !i.description.startsWith('Medicine:'));
+
+    const rowHtml = (rows: any[]) => rows.map((item: any, idx: number) => `
+      <tr${idx % 2 === 1 ? ' style="background:#fafcfe"' : ''}>
         <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:left">${item.description}</td>
         <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:center">${item.quantity}</td>
         <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${formatCurrency(item.unit_price)}</td>
-        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right">${formatCurrency(item.total)}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600">${formatCurrency(item.total)}</td>
       </tr>
     `).join('');
 
-    const paymentsHtml = payments.length > 0 ? `
-      <h3 style="font-size:16px;font-weight:600;margin:24px 0 12px;color:#1a2332;border-bottom:2px solid #179f8f;padding-bottom:8px">Payment History</h3>
-      <table style="width:100%;border-collapse:collapse;font-size:14px">
-        <thead>
-          <tr style="background:#f4f8fc">
-            <th style="padding:10px 12px;text-align:left;font-weight:600;color:#3d4e66;font-size:13px;text-transform:uppercase">Date</th>
-            <th style="padding:10px 12px;text-align:right;font-weight:600;color:#3d4e66;font-size:13px;text-transform:uppercase">Amount</th>
-            <th style="padding:10px 12px;text-align:left;font-weight:600;color:#3d4e66;font-size:13px;text-transform:uppercase">Method</th>
-            <th style="padding:10px 12px;text-align:left;font-weight:600;color:#3d4e66;font-size:13px;text-transform:uppercase">Reference</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${payments.map((p: Payment) => `
-            <tr>
-              <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:left">${formatDate(p.payment_date, 'short')}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600">${formatCurrency(p.amount)}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:left">${p.payment_method}</td>
-              <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:left">${p.reference_number || '—'}</td>
+    const section = (title: string, rows: any[], label: string) => rows.length > 0 ? `
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <h4 style="font-size:14px;font-weight:600;color:#179f8f;text-transform:uppercase;letter-spacing:0.03em">${title}</h4>
+          <span style="font-size:13px;font-weight:500;color:#3d4e66">${label} ${formatCurrency(rows.reduce((s: number, r: any) => s + r.total, 0))}</span>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f4f8fc">
+              <th style="padding:8px 12px;text-align:left;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase;letter-spacing:0.05em">Description</th>
+              <th style="padding:8px 12px;text-align:center;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;width:50px">Qty</th>
+              <th style="padding:8px 12px;text-align:right;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;width:120px">Unit Price</th>
+              <th style="padding:8px 12px;text-align:right;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;width:120px">Total</th>
             </tr>
-          `).join('')}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>${rowHtml(rows)}</tbody>
+        </table>
+      </div>
     ` : '';
+
+    const itemsByCategory = section('Services', services, '') +
+      section('Procedures', procs, '') +
+      section('Doctor\'s Professional Fees', professionalFees, '') +
+      section('Medicines', meds, '');
+
+    const paymentsHtml = payments.length > 0 ? `
+      <div style="margin-bottom:20px">
+        <h4 style="font-size:14px;font-weight:600;color:#179f8f;text-transform:uppercase;letter-spacing:0.03em;margin-bottom:8px">Payment History</h4>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:#f4f8fc">
+              <th style="padding:8px 12px;text-align:left;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase">Date</th>
+              <th style="padding:8px 12px;text-align:right;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase">Amount</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase">Method</th>
+              <th style="padding:8px 12px;text-align:left;font-weight:600;color:#3d4e66;font-size:11px;text-transform:uppercase">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.map((p: Payment, idx: number) => `
+              <tr${idx % 2 === 1 ? ' style="background:#fafcfe"' : ''}>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${formatDate(p.payment_date, 'short')}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;font-weight:600">${formatCurrency(p.amount)}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${p.payment_method}</td>
+                <td style="padding:8px 12px;border-bottom:1px solid #e2e8f0">${p.reference_number || '—'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    ` : '';
+
+    const subtotal = items.reduce((s: number, i: any) => s + i.total, 0);
 
     win.document.write(`
       <!DOCTYPE html>
@@ -112,8 +234,8 @@ export default function InvoiceView() {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 32px;
-            padding-bottom: 24px;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
             border-bottom: 3px solid #179f8f;
           }
           .brand h1 {
@@ -123,32 +245,17 @@ export default function InvoiceView() {
             letter-spacing: -0.02em;
           }
           .brand p {
-            font-size: 13px;
-            color: #6c819e;
-            margin-top: 4px;
-          }
-          .invoice-meta {
-            text-align: right;
-          }
-          .invoice-meta h2 {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1a2332;
-          }
-          .invoice-meta p {
-            font-size: 13px;
-            color: #6c819e;
-            margin-top: 2px;
-          }
-          .invoice-meta .status {
-            display: inline-block;
-            padding: 4px 14px;
-            border-radius: 20px;
             font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-top: 8px;
+            color: #6c819e;
+            margin-top: 3px;
+          }
+          .invoice-meta { text-align: right; }
+          .invoice-meta h2 { font-size: 18px; font-weight: 700; color: #1a2332; }
+          .invoice-meta p { font-size: 12px; color: #6c819e; margin-top: 2px; }
+          .invoice-meta .status {
+            display: inline-block; padding: 4px 14px; border-radius: 20px;
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; margin-top: 6px;
           }
           .status-paid { background: #dcfce7; color: #166534; }
           .status-partial { background: #fef3c7; color: #92400e; }
@@ -156,92 +263,54 @@ export default function InvoiceView() {
           .status-overdue { background: #ffe0e0; color: #b71c1c; }
           .detail-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
             margin-bottom: 24px;
-            padding: 20px;
+            padding: 16px 20px;
             background: #f8fafc;
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid #e2e8f0;
           }
           .detail-item label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: #6c819e;
-            margin-bottom: 2px;
+            display: block; font-size: 11px; font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.05em;
+            color: #6c819e; margin-bottom: 1px;
           }
-          .detail-item span {
-            font-size: 15px;
-            font-weight: 500;
-            color: #1a2332;
+          .detail-item span { font-size: 14px; font-weight: 500; color: #1a2332; }
+          .divider {
+            height: 1px; background: #e2e8f0; margin: 20px 0;
           }
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-            margin-bottom: 24px;
+          .totals-wrap {
+            margin-left: auto; width: 320px; margin-top: 8px;
           }
-          thead th {
-            background: #f4f8fc;
-            padding: 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #3d4e66;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+          .totals-wrap .row {
+            display: flex; justify-content: space-between;
+            padding: 5px 0; font-size: 13px;
           }
-          tbody td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #e2e8f0;
+          .totals-wrap .row.sub {
+            border-top: 2px solid #179f8f; padding-top: 8px; margin-top: 4px;
           }
-          tbody tr:last-child td {
-            border-bottom: none;
-          }
-          .totals {
-            margin-left: auto;
-            width: 320px;
-            border-top: 2px solid #179f8f;
-            padding-top: 12px;
-          }
-          .totals .row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            font-size: 14px;
-          }
-          .totals .row.final {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1a2332;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 10px;
-            margin-top: 6px;
+          .totals-wrap .row.final {
+            font-size: 17px; font-weight: 700; color: #1a2332;
+            border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 4px;
           }
           .footer {
-            margin-top: 40px;
-            padding-top: 16px;
+            margin-top: 32px; padding-top: 16px;
             border-top: 1px solid #e2e8f0;
-            text-align: center;
-            font-size: 12px;
-            color: #94a3b8;
+            text-align: center; font-size: 11px; color: #94a3b8;
           }
-          .no-print {
-            text-align: center;
-            margin-bottom: 20px;
+          .footer .signature-grid {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 40px; margin-bottom: 20px; text-align: left;
           }
+          .signature-box {
+            border-top: 1px solid #cbd5e1; padding-top: 6px; margin-top: 50px;
+            font-size: 12px; color: #6c819e;
+          }
+          .no-print { text-align: center; margin-bottom: 20px; }
           .no-print button {
-            padding: 10px 32px;
-            background: #179f8f;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
+            padding: 10px 32px; background: #179f8f; color: white;
+            border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
           }
           .no-print button:hover { background: #0d7f72; }
         </style>
@@ -259,8 +328,8 @@ export default function InvoiceView() {
           </div>
           <div class="invoice-meta">
             <h2>Invoice #${invoice.invoice_number}</h2>
-            <p>Date: ${formatDate(invoice.invoice_date)}</p>
-            <p>Due: ${formatDate(invoice.due_date)}</p>
+            <p>Date Issued: ${formatDate(invoice.invoice_date)}</p>
+            <p>Due Date: ${formatDate(invoice.due_date)}</p>
             <span class="status status-${invoice.status.toLowerCase()}">${invoice.status}</span>
           </div>
         </div>
@@ -271,36 +340,33 @@ export default function InvoiceView() {
             <span>${invoice.patient_name || '—'}</span>
           </div>
           <div class="detail-item">
-            <label>Status</label>
+            <label>Invoice Status</label>
             <span>${invoice.status}</span>
           </div>
+          <div class="detail-item">
+            <label>Balance</label>
+            <span style="color:${parseFloat(String(invoice.balance)) > 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(invoice.balance)}</span>
+          </div>
           ${invoice.notes ? `
-          <div class="detail-item" style="grid-column: span 2;">
+          <div class="detail-item" style="grid-column: span 3;">
             <label>Notes</label>
             <span>${invoice.notes}</span>
           </div>
           ` : ''}
         </div>
 
-        <h3 style="font-size:16px;font-weight:600;margin-bottom:12px;color:#1a2332;border-bottom:2px solid #179f8f;padding-bottom:8px">Line Items</h3>
-        <table>
-          <thead>
-            <tr>
-              <th style="text-align:left">Description</th>
-              <th style="text-align:center;width:60px">Qty</th>
-              <th style="text-align:right;width:130px">Unit Price</th>
-              <th style="text-align:right;width:130px">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
-        </table>
+        ${itemsByCategory}
 
-        <div class="totals">
+        <div class="divider"></div>
+
+        <div class="totals-wrap">
+          <div class="row sub">
+            <span style="font-weight:600">Subtotal</span>
+            <span style="font-weight:600">${formatCurrency(subtotal)}</span>
+          </div>
           <div class="row">
-            <span>Subtotal</span>
-            <span>${formatCurrency(invoice.items?.reduce((s: number, i: any) => s + i.total, 0) || 0)}</span>
+            <span>Tax (10%)</span>
+            <span>${formatCurrency(invoice.tax)}</span>
           </div>
           <div class="row final">
             <span>Total</span>
@@ -311,7 +377,7 @@ export default function InvoiceView() {
             <span style="color:#16a34a">${formatCurrency(invoice.paid_amount)}</span>
           </div>
           <div class="row" style="font-weight:600;color:${parseFloat(String(invoice.balance)) > 0 ? '#dc2626' : '#16a34a'}">
-            <span>Balance</span>
+            <span>Balance Due</span>
             <span>${formatCurrency(invoice.balance)}</span>
           </div>
         </div>
@@ -319,8 +385,19 @@ export default function InvoiceView() {
         ${paymentsHtml}
 
         <div class="footer">
-          <p>Thank you for choosing ${clinicName}</p>
-          <p style="margin-top:4px">This is a computer-generated invoice.</p>
+          <div class="signature-grid">
+            <div>
+              <p style="font-size:12px;font-weight:600;color:#1a2332">Patient/Guardian Signature</p>
+              <div class="signature-box">___________________________</div>
+            </div>
+            <div>
+              <p style="font-size:12px;font-weight:600;color:#1a2332">Authorized Representative</p>
+              <div class="signature-box">___________________________</div>
+            </div>
+          </div>
+          <p style="font-weight:600;color:#1a2332">Thank you for choosing ${clinicName}</p>
+          <p style="margin-top:2px">This is a computer-generated invoice.</p>
+          <p style="margin-top:2px">Payment is due within 30 days. Please retain this invoice for your records.</p>
         </div>
 
         <script>
@@ -345,6 +422,12 @@ export default function InvoiceView() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
             </svg>
             Print
+          </Button>
+          <Button appearance="ghost" onClick={openEdit} disabled={invoice.status === 'Paid'}>
+            <svg className="w-4 h-4 inline mr-1.5 -mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+            </svg>
+            Edit Items
           </Button>
           <Button appearance="primary" onClick={() => setShowPayment(true)} disabled={invoice.status === 'Paid'}>Record Payment</Button>
           <Link to="/billing"><Button appearance="default">Back</Button></Link>
@@ -411,6 +494,10 @@ export default function InvoiceView() {
               <Table.HeaderCell>Reference</Table.HeaderCell>
               <Cell>{(rowData: Payment) => <span className="text-gray-700 dark:text-gray-300">{rowData.reference_number || '—'}</span>}</Cell>
             </Column>
+            <Column width={150}>
+              <Table.HeaderCell>Processed By</Table.HeaderCell>
+              <Cell>{(rowData: any) => <span className="text-gray-700 dark:text-gray-300">{rowData.processed_by || '—'}</span>}</Cell>
+            </Column>
           </Table>
         </div>
       )}
@@ -446,6 +533,167 @@ export default function InvoiceView() {
         <Modal.Footer>
           <Button appearance="primary" onClick={handleRecordPayment} disabled={paymentForm.amount <= 0}>Record</Button>
           <Button appearance="default" onClick={() => setShowPayment(false)}>Cancel</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Edit Items Modal */}
+      <Modal open={showEdit} onClose={() => setShowEdit(false)} size="md">
+        <Modal.Header><Modal.Title>Edit Invoice Items</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            {/* Add items toolbar */}
+            <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-gray-200 dark:border-gray-700">
+              <SelectPicker
+                data={services.map((s: any) => ({ label: `${s.name} — ${formatCurrency(s.price)}`, value: s.id }))}
+                value={selectedService}
+                onChange={(v) => setSelectedService(v)}
+                placeholder="Select a service..."
+                style={{ minWidth: 240 }}
+                searchable
+                labelKey="label"
+                valueKey="value"
+              />
+              <Button appearance="primary" size="sm" onClick={handleAddService} disabled={!selectedService}>
+                <Plus /> Add Service
+              </Button>
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+              <Button appearance="ghost" size="sm" onClick={() => setShowDoctorFeeModal(true)}>
+                + Doc's Fee
+              </Button>
+              <Button appearance="ghost" size="sm" onClick={() => setShowMedicineModal(true)}>
+                + Medicine
+              </Button>
+            </div>
+
+            {/* Items list */}
+            {editItems.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-6">No items yet. Add services, doctor fees, or medicines above.</p>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {editItems.map((item: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">{item.description}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Qty: {item.quantity} &times; {formatCurrency(item.unit_price)} = <span className="font-semibold text-gray-700 dark:text-gray-300">{formatCurrency(item.total)}</span>
+                      </p>
+                    </div>
+                    <IconButton size="sm" appearance="subtle" icon={<Trash style={{ color: '#e53e3e' }} />} onClick={() => handleRemoveItem(idx)} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Subtotal</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(editSubtotal)}</span>
+            </div>
+            <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+              <span>Tax (10%)</span>
+              <span>{formatCurrency(editSubtotal * 0.1)}</span>
+            </div>
+            <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
+              <span className="text-base font-semibold text-gray-800 dark:text-gray-200">Total</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(editSubtotal * 1.1)}</span>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button appearance="primary" onClick={handleSaveItems} disabled={editItems.length === 0 || saving}>
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+          <Button appearance="default" onClick={() => setShowEdit(false)}>Cancel</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Doctor Fee Modal */}
+      <Modal open={showDoctorFeeModal} onClose={() => setShowDoctorFeeModal(false)} size="sm">
+        <Modal.Header><Modal.Title>Add Doctor's Professional Fee</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            {patientDoctors.length > 0 ? (
+              <FormField label="Doctor">
+                <SelectPicker
+                  data={patientDoctors.map((d: any) => ({
+                    label: `Dr. ${d.first_name} ${d.last_name}`,
+                    value: String(d.id)
+                  }))}
+                  value={doctorFeeForm.doctorId}
+                  onChange={(v) => {
+                    const d = patientDoctors.find((p: any) => String(p.id) === v);
+                    setDoctorFeeForm({ ...doctorFeeForm, doctorId: v || '', doctorName: d ? `${d.first_name} ${d.last_name}` : '' });
+                  }}
+                  placeholder="Select doctor..."
+                  style={{ width: '100%' }}
+                  searchable
+                />
+              </FormField>
+            ) : (
+              <FormField label="Doctor Name">
+                <Input
+                  placeholder="e.g. Juan Dela Cruz"
+                  value={doctorFeeForm.doctorName}
+                  onChange={(v) => setDoctorFeeForm({ ...doctorFeeForm, doctorName: v })}
+                />
+              </FormField>
+            )}
+            <FormField label="Fee Amount">
+              <Input
+                type="number"
+                min={1}
+                placeholder="0.00"
+                value={doctorFeeForm.amount || ''}
+                onChange={(v) => setDoctorFeeForm({ ...doctorFeeForm, amount: Number(v) || 0 })}
+              />
+            </FormField>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button appearance="primary" onClick={handleAddDoctorFee} disabled={(!doctorFeeForm.doctorId && !doctorFeeForm.doctorName) || doctorFeeForm.amount <= 0}>Add Fee</Button>
+          <Button appearance="default" onClick={() => setShowDoctorFeeModal(false)}>Cancel</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Medicine Modal */}
+      <Modal open={showMedicineModal} onClose={() => setShowMedicineModal(false)} size="sm">
+        <Modal.Header><Modal.Title>Add Medicine Charge</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <div className="space-y-4">
+            <FormField label="Medicine Name">
+              <Input
+                placeholder="e.g. Paracetamol 500mg"
+                value={medicineForm.name}
+                onChange={(v) => setMedicineForm({ ...medicineForm, name: v })}
+              />
+            </FormField>
+            <FormField label="Quantity">
+              <Input
+                type="number"
+                min={1}
+                value={medicineForm.quantity}
+                onChange={(v) => setMedicineForm({ ...medicineForm, quantity: Number(v) || 1 })}
+              />
+            </FormField>
+            <FormField label="Unit Price">
+              <Input
+                type="number"
+                min={0.01}
+                step={0.01}
+                placeholder="0.00"
+                value={medicineForm.unitPrice || ''}
+                onChange={(v) => setMedicineForm({ ...medicineForm, unitPrice: Number(v) || 0 })}
+              />
+            </FormField>
+            <div className="flex justify-between text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span>Line Total</span>
+              <span>{formatCurrency(medicineForm.quantity * medicineForm.unitPrice)}</span>
+            </div>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button appearance="primary" onClick={handleAddMedicine} disabled={!medicineForm.name || medicineForm.quantity <= 0 || medicineForm.unitPrice <= 0}>Add Medicine</Button>
+          <Button appearance="default" onClick={() => setShowMedicineModal(false)}>Cancel</Button>
         </Modal.Footer>
       </Modal>
     </div>

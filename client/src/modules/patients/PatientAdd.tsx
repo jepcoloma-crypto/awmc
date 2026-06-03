@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Button, Input, SelectPicker, DatePicker, Notification, useToaster } from 'rsuite';
+import { Button, Input, SelectPicker, DatePicker, TagPicker, Notification, useToaster } from 'rsuite';
+import { toLocalDateString } from '@/lib/utils';
+import type { Doctor } from '@/types';
 
 const genderOptions = [
   { label: 'Male', value: 'Male' },
@@ -19,12 +21,18 @@ const bloodTypeOptions = [
 export default function PatientAdd() {
   const navigate = useNavigate();
   const toaster = useToaster();
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [form, setForm] = useState({
     first_name: '', last_name: '', date_of_birth: '', gender: '' as string,
     phone: '', email: '', address: '', blood_type: '',
     medical_history: '', allergies: '', emergency_contact_name: '', emergency_contact_phone: '',
+    doctor_ids: [] as number[],
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    apiClient.get('/doctors').then((r) => setDoctors(r.data.data));
+  }, []);
 
   const handleChange = (key: string, value: any) => setForm({ ...form, [key]: value });
 
@@ -60,7 +68,7 @@ export default function PatientAdd() {
               <Input value={form.last_name} onChange={(v) => handleChange('last_name', v)} required />
             </FormField>
             <FormField label="Date of Birth" required>
-              <DatePicker className="w-full" value={form.date_of_birth ? new Date(form.date_of_birth) : null} onChange={(v) => handleChange('date_of_birth', v ? v.toISOString().split('T')[0] : '')} placement="auto" oneTap />
+              <DatePicker className="w-full" value={form.date_of_birth ? new Date(form.date_of_birth) : null} onChange={(v) => handleChange('date_of_birth', v ? toLocalDateString(v) : '')} placement="auto" oneTap />
             </FormField>
             <FormField label="Gender" required>
               <SelectPicker data={genderOptions} value={form.gender as any} onChange={(v) => handleChange('gender', v)} className="w-full" searchable={false} />
@@ -102,6 +110,17 @@ export default function PatientAdd() {
               <Input type="tel" value={form.emergency_contact_phone} onChange={(v) => handleChange('emergency_contact_phone', v)} />
             </FormField>
           </div>
+        </div>
+
+        <div>
+          <h4 className="form-section-title">Assigned Doctors</h4>
+          <TagPicker
+            data={doctors.map((d) => ({ label: `Dr. ${d.first_name} ${d.last_name}`, value: d.id }))}
+            value={form.doctor_ids}
+            onChange={(v: any) => handleChange('doctor_ids', v)}
+            style={{ width: '100%' }}
+            placeholder="Select doctors..."
+          />
         </div>
 
         <div className="flex gap-3 pt-2">

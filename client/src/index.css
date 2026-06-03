@@ -255,7 +255,7 @@ p, li, th, td, label, .rs-text {
   padding: var(--space-lg) 0;
 }
 .page-header h2 {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;

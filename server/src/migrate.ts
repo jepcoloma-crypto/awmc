@@ -1,10 +1,10 @@
+import 'dotenv/config';
 import { Client } from 'pg';
 import * as fs from 'fs';
 import * as path from 'path';
 import bcrypt from 'bcryptjs';
 
-const connectionString = process.env.DATABASE_URL ||
-  'postgresql://postgres.cwaztykcwvrkltgysvhl:CYNaIA2fYrddxg55@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres';
+const connectionString = process.env.DATABASE_URL;
 
 async function migrate() {
   console.log('Connecting to database...');
@@ -48,6 +48,28 @@ async function migrate() {
   try {
     const res = await client.query(`UPDATE users SET doctor_id = 1 WHERE username = 'doctor1'`);
     if (res.rowCount && res.rowCount > 0) console.log('✓ Linked doctor1 user to doctor record');
+  } catch (err: any) {
+    console.error(`✗ ${err.message}`);
+  }
+
+  // Migrate existing doctor_id from patients to patient_doctors
+  try {
+    await client.query(`
+      INSERT INTO patient_doctors (patient_id, doctor_id)
+      SELECT id, doctor_id FROM patients WHERE doctor_id IS NOT NULL
+      ON CONFLICT DO NOTHING
+    `);
+    console.log('✓ Migrated existing doctor assignments to patient_doctors');
+  } catch (err: any) {
+    console.error(`✗ ${err.message}`);
+  }
+
+  // Add created_by column to payments if not exists
+  try {
+    await client.query(`
+      ALTER TABLE payments ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id) ON DELETE SET NULL
+    `);
+    console.log('✓ Added created_by column to payments');
   } catch (err: any) {
     console.error(`✗ ${err.message}`);
   }

@@ -1,7 +1,7 @@
+import 'dotenv/config';
 import { Client } from 'pg';
 
-const connectionString = process.env.DATABASE_URL ||
-  'postgresql://postgres.cwaztykcwvrkltgysvhl:CYNaIA2fYrddxg55@aws-1-ap-southeast-2.pooler.supabase.com:5432/postgres';
+const connectionString = process.env.DATABASE_URL;
 
 async function clearData() {
   const client = new Client({ connectionString });
@@ -18,6 +18,8 @@ async function clearData() {
     'patients',
     'doctors',
     'settings',
+    'services',
+    'procedure_types',
   ];
 
   for (const table of tables) {
@@ -30,7 +32,7 @@ async function clearData() {
   }
 
   await client.end();
-  console.log('\n✓ All data cleared. Kept tables: users, services, procedure_types.');
+  console.log('\n✓ All demo data cleared. Kept table: users only.');
 }
 
 clearData().catch((err) => {

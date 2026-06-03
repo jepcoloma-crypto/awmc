@@ -17,6 +17,24 @@ export function formatDate(date: string | Date, format: 'short' | 'long' | 'time
   }
 }
 
+export function formatDateDDMMYYYY(date: string): string {
+  const d = date.split('T')[0];
+  if (!d) return date;
+  const [y, m, day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+export function formatTimeHHMM(time: string): string {
+  return time ? time.slice(0, 5) : time;
+}
+
+export function toLocalDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export function calculateAge(dob: string): number {
   const birth = new Date(dob);
   const today = new Date();

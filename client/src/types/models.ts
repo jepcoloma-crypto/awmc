@@ -51,6 +51,7 @@ export interface Patient {
   photo_url: string | null;
   status: PatientStatus;
   doctor_id: number | null;
+  doctors?: { id: number; first_name: string; last_name: string }[];
   created_at: string;
   updated_at: string;
 }
@@ -137,6 +138,7 @@ export interface PatientProcedure {
   notes: string;
   fee: number;
   created_at: string;
+  procedure_name?: string;
 }
 
 export interface Reminder {

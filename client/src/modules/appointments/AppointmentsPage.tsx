@@ -1,13 +1,15 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, SelectPicker, Modal, Notification, useToaster } from 'rsuite';
+import { Table, Tag, Button, SelectPicker, IconButton, Modal, Notification, useToaster } from 'rsuite';
+import { EyeRound, EditRound, Trash } from '@rsuite/icons';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg } from '@fullcalendar/core';
 import type { Appointment } from '@/types';
+import { formatDateDDMMYYYY, formatTimeHHMM } from '@/lib/utils';
 
 const { Column, Cell } = Table;
 
@@ -28,6 +30,7 @@ export default function AppointmentsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState<Appointment | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Appointment | null>(null);
   const [stats, setStats] = useState({ scheduled: 0, confirmed: 0, completed: 0, cancelled: 0, noShow: 0 });
 
   useEffect(() => { loadAppointments(); }, []);
@@ -51,16 +54,19 @@ export default function AppointmentsPage() {
 
   const events = appointments
     .filter((a) => !statusFilter || a.status === statusFilter)
-    .map((a) => ({
-      id: String(a.id),
-      title: `${a.patient_name} - ${a.reason}`,
-      start: `${a.appointment_date}T${a.appointment_time}`,
-      end: `${a.appointment_date}T${a.end_time}`,
-      backgroundColor: statusColors[a.status] || '#3b82f6',
-      borderColor: statusColors[a.status] || '#3b82f6',
-      textColor: '#fff',
-      extendedProps: a,
-    }));
+    .map((a) => {
+      const date = a.appointment_date.split('T')[0];
+      return {
+        id: String(a.id),
+        title: `${a.patient_name} - ${a.reason}`,
+        start: `${date}T${a.appointment_time}`,
+        end: `${date}T${a.end_time}`,
+        backgroundColor: statusColors[a.status] || '#3b82f6',
+        borderColor: statusColors[a.status] || '#3b82f6',
+        textColor: '#fff',
+        extendedProps: a,
+      };
+    });
 
   const handleEventClick = (info: EventClickArg) => {
     const appt = appointments.find((a) => String(a.id) === info.event.id);
@@ -68,11 +74,10 @@ export default function AppointmentsPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Delete this appointment?')) return;
     try {
       await apiClient.delete(`/appointments/${id}`);
       toaster.push(<Notification type="success" header="Deleted">Appointment deleted</Notification>, { placement: 'topEnd' });
-      setViewModal(null);
+      setDeleteTarget(null);
       loadAppointments();
     } catch {
       toaster.push(<Notification type="error" header="Error">Failed to delete</Notification>, { placement: 'topEnd' });
@@ -147,8 +152,8 @@ export default function AppointmentsPage() {
           />
         </div>
         <Table data={appointments} loading={loading} autoHeight rowHeight={52}>
-          <Column width={100}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: Appointment) => r.appointment_date}</Cell></Column>
-          <Column width={90}><Table.HeaderCell>Time</Table.HeaderCell><Cell>{(r: Appointment) => r.appointment_time}</Cell></Column>
+          <Column width={100}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: Appointment) => formatDateDDMMYYYY(r.appointment_date)}</Cell></Column>
+          <Column width={80}><Table.HeaderCell>Time</Table.HeaderCell><Cell>{(r: Appointment) => formatTimeHHMM(r.appointment_time)}</Cell></Column>
           <Column width={180}><Table.HeaderCell>Patient</Table.HeaderCell><Cell>{(r: Appointment) => <span className="font-medium">{r.patient_name}</span>}</Cell></Column>
           <Column width={180}><Table.HeaderCell>Doctor</Table.HeaderCell><Cell>{(r: Appointment) => r.doctor_name}</Cell></Column>
           <Column width={160} flexGrow={1}><Table.HeaderCell>Reason</Table.HeaderCell><Cell>{(r: Appointment) => r.reason}</Cell></Column>
@@ -161,11 +166,12 @@ export default function AppointmentsPage() {
               r.status === 'Cancelled' ? 'red' : 'violet'
             }>{r.status}</Tag>
           )}</Cell></Column>
-          <Column width={100}><Table.HeaderCell>Actions</Table.HeaderCell>
+          <Column width={130}><Table.HeaderCell>Actions</Table.HeaderCell>
             <Cell>{(r: Appointment) => (
               <div className="flex gap-1">
-                <Button size="sm" appearance="link" onClick={(e) => { e.stopPropagation(); setViewModal(r); }}>View</Button>
-                <Button size="sm" appearance="link" onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${r.id}/edit`); }}>Edit</Button>
+                <IconButton size="sm" appearance="subtle" icon={<EyeRound style={{ color: '#0b6e4f' }} />} onClick={(e) => { e.stopPropagation(); setViewModal(r); }} />
+                <IconButton size="sm" appearance="subtle" icon={<EditRound style={{ color: '#2563eb' }} />} onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${r.id}/edit`); }} />
+                <IconButton size="sm" appearance="subtle" icon={<Trash style={{ color: '#e53e3e' }} />} onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} />
               </div>
             )}</Cell>
           </Column>
@@ -179,8 +185,8 @@ export default function AppointmentsPage() {
             <div className="space-y-3 text-sm">
               <DetailRow label="Patient" value={viewModal.patient_name} />
               <DetailRow label="Doctor" value={viewModal.doctor_name} />
-              <DetailRow label="Date" value={viewModal.appointment_date} />
-              <DetailRow label="Time" value={`${viewModal.appointment_time} - ${viewModal.end_time}`} />
+              <DetailRow label="Date" value={formatDateDDMMYYYY(viewModal.appointment_date)} />
+              <DetailRow label="Time" value={`${formatTimeHHMM(viewModal.appointment_time)} - ${formatTimeHHMM(viewModal.end_time)}`} />
               <DetailRow label="Status" value={viewModal.status} />
               <DetailRow label="Reason" value={viewModal.reason} />
               {viewModal.notes && <DetailRow label="Notes" value={viewModal.notes} />}
@@ -188,10 +194,20 @@ export default function AppointmentsPage() {
           )}
         </Modal.Body>
         <Modal.Footer>
-          {viewModal && (
-            <Button appearance="default" color="red" onClick={() => handleDelete(viewModal.id)}>Delete</Button>
-          )}
           <Button onClick={() => setViewModal(null)} appearance="primary">Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} size="xs">
+        <Modal.Header><Modal.Title>Delete Appointment</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Are you sure you want to delete the appointment for <strong>{deleteTarget?.patient_name}</strong> on {deleteTarget ? formatDateDDMMYYYY(deleteTarget.appointment_date) : ''}?
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button appearance="primary" color="red" onClick={() => { if (deleteTarget) handleDelete(deleteTarget.id); }}>Delete</Button>
+          <Button appearance="default" onClick={() => setDeleteTarget(null)}>Cancel</Button>
         </Modal.Footer>
       </Modal>
     </div>

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, Input, SelectPicker } from 'rsuite';
+import { Table, Tag, Button, Input, SelectPicker, IconButton, Notification, useToaster } from 'rsuite';
+import { CheckRound, Close } from '@rsuite/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { calculateAge } from '@/lib/utils';
 import { canAccess } from '@/lib/permissions';
@@ -12,6 +13,7 @@ const { Column, Cell } = Table;
 export default function PatientsList() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const toaster = useToaster();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,15 +38,26 @@ export default function PatientsList() {
     }
   };
 
+  const toggleStatus = async (patient: Patient) => {
+    const newStatus = patient.status === 'Active' ? 'Inactive' : 'Active';
+    try {
+      const res = await apiClient.put(`/patients/${patient.id}`, { status: newStatus });
+      setPatients(patients.map((p) => p.id === patient.id ? { ...p, ...res.data } : p));
+      toaster.push(<Notification type="success" header="Updated">Patient {newStatus === 'Active' ? 'activated' : 'deactivated'}</Notification>, { placement: 'topEnd' });
+    } catch {
+      toaster.push(<Notification type="error" header="Error">Failed to update patient status</Notification>, { placement: 'topEnd' });
+    }
+  };
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="page-header">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50 tracking-tight">Patients</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Manage patient records and medical history</p>
+          <h2>Patients</h2>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mt-1">Manage patient records and medical history</p>
         </div>
         {canAccess('patients', user) && (
-          <Button appearance="primary" onClick={() => navigate('/patients/add')}>
+          <Button className="btn-wellness" onClick={() => navigate('/patients/add')}>
             + Add Patient
           </Button>
         )}
@@ -67,7 +80,7 @@ export default function PatientsList() {
       </div>
 
       <div className="wellness-card">
-        <Table data={patients} loading={loading} autoHeight rowHeight={52} onRowClick={(rowData) => navigate(`/patients/${rowData.id}`)}>
+        <Table data={patients} loading={loading} autoHeight rowHeight={52}>
           <Column width={110}>
             <Table.HeaderCell>Patient ID</Table.HeaderCell>
             <Cell>{(rowData: Patient) => (
@@ -77,7 +90,7 @@ export default function PatientsList() {
           <Column width={200}>
             <Table.HeaderCell>Name</Table.HeaderCell>
             <Cell>{(rowData: Patient) => (
-              <span className="font-medium text-gray-900 dark:text-gray-100">{rowData.first_name} {rowData.last_name}</span>
+              <span className="font-medium text-[#0b6e4f] dark:text-[#2ec4b6] cursor-pointer hover:underline" onClick={() => navigate(`/patients/${rowData.id}`)}>{rowData.first_name} {rowData.last_name}</span>
             )}</Cell>
           </Column>
           <Column width={90}>
@@ -102,6 +115,26 @@ export default function PatientsList() {
               <Tag color={rowData.status === 'Active' ? 'green' : 'red'}>{rowData.status}</Tag>
             )}</Cell>
           </Column>
+          <Column width={180} flexGrow={1}>
+            <Table.HeaderCell>Doctors</Table.HeaderCell>
+            <Cell>{(rowData: Patient) => (
+              <div className="flex gap-1 flex-wrap">
+                {rowData.doctors && rowData.doctors.length > 0
+                  ? rowData.doctors.map((d) => <Tag key={d.id} style={{ background: '#e8f5e9', color: '#0b6e4f', fontWeight: 500, fontSize: 12 }}>Dr. {d.first_name} {d.last_name}</Tag>)
+                  : <span className="text-gray-400">—</span>}
+              </div>
+            )}</Cell>
+          </Column>
+          {user?.role !== 'Medical Practitioner' && (
+            <Column width={120} align="center">
+              <Table.HeaderCell>Actions</Table.HeaderCell>
+              <Cell>{(rowData: Patient) => (
+                <div className="flex gap-1 justify-center">
+                  <IconButton size="sm" appearance="subtle" icon={rowData.status !== 'Active' ? <CheckRound style={{ color: '#0b6e4f' }} /> : <Close style={{ color: '#e53e3e' }} />} onClick={() => toggleStatus(rowData)} />
+                </div>
+              )}</Cell>
+            </Column>
+          )}
         </Table>
       </div>
     </div>

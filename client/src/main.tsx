@@ -4,7 +4,7 @@ import App from './App';
 import './index.css';
 
 async function startApp() {
-  const useMocks = import.meta.env.DEV || import.meta.env.VITE_USE_MOCKS === 'true';
+  const useMocks = import.meta.env.VITE_USE_MOCKS === 'true';
   if (useMocks) {
     const { worker } = await import('./mocks/browser');
     await worker.start({

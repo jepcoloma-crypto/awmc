@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
 import { Button, Input, SelectPicker, DatePicker, Notification, useToaster } from 'rsuite';
+import { toLocalDateString } from '@/lib/utils';
 import type { Appointment, Patient, Doctor } from '@/types';
 
 const statusOptions = [
@@ -73,7 +74,7 @@ export default function AppointmentEdit() {
             <SelectPicker data={doctors.map((d) => ({ label: `Dr. ${d.first_name} ${d.last_name}`, value: d.id }))} value={form.doctor_id} onChange={(v) => setForm({ ...form, doctor_id: v })} className="w-full" />
           </FormField>
           <FormField label="Date" required>
-            <DatePicker className="w-full" value={form.appointment_date ? new Date(form.appointment_date) : null} onChange={(v) => setForm({ ...form, appointment_date: v ? v.toISOString().split('T')[0] : '' })} oneTap />
+            <DatePicker className="w-full" value={form.appointment_date ? new Date(form.appointment_date) : null} onChange={(v) => setForm({ ...form, appointment_date: v ? toLocalDateString(v) : '' })} oneTap />
           </FormField>
           <FormField label="Status">
             <SelectPicker data={statusOptions} value={form.status} onChange={(v) => setForm({ ...form, status: v })} className="w-full" searchable={false} />

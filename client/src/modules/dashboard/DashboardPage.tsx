@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/lib/utils';
+import { StatsCardSkeleton } from '@/components/skeletons/TableSkeleton';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Table, Tag } from 'rsuite';
 
@@ -10,7 +11,6 @@ const { Column, Cell: CellT } = Table;
 
 const PIE_COLORS = ['#0b6e4f', '#2ec4b6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
-// Custom tooltip for charts
 function ChartTooltip({ active, payload, label, formatter }: any) {
   if (active && payload && payload.length) {
     return (
@@ -52,10 +52,13 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-6 h-6 border-2 border-[#0b6e4f] border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm text-gray-400 dark:text-gray-500">Loading dashboard...</span>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <StatsCardSkeleton key={i} />)}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="animate-pulse rounded-xl border border-gray-200 dark:border-gray-700 p-5 h-80" />
+          <div className="animate-pulse rounded-xl border border-gray-200 dark:border-gray-700 p-5 h-80" />
         </div>
       </div>
     );
@@ -66,19 +69,28 @@ export default function DashboardPage() {
 
   const isDoctor = user?.role === 'Medical Practitioner';
   const isCashier = user?.role === 'Cashier';
+  const isFrontDesk = user?.role === 'Front Desk Staff';
 
   const statCards = [];
-  statCards.push({
-    title: "Today's Appointments", value: stats.total_appointments_today, icon: 'calendar', variant: 'blue',
-    detail: `${stats.completed_appointments} completed`,
-  });
+  if (!isCashier) {
+    statCards.push({
+      title: "Today's Appointments", value: stats.total_appointments_today, icon: 'calendar', variant: 'blue',
+      detail: `${stats.completed_appointments} completed`,
+    });
+  }
   if (!isCashier) {
     statCards.push({
       title: 'Active Patients', value: stats.total_patients, icon: 'users', variant: 'green',
       detail: 'Registered patients',
     });
   }
-  if (isCashier) {
+  if (isCashier || isDoctor) {
+    if (isDoctor) {
+      statCards.push({
+        title: "Today's Professional Fee", value: formatCurrency(stats.prof_fee_collected_today), icon: 'currency', variant: 'teal',
+        detail: 'Doctor professional fee collected',
+      });
+    }
     statCards.push({
       title: "Today's Collections", value: formatCurrency(stats.total_collected_today), icon: 'currency', variant: 'green',
       detail: 'Total collected today',
@@ -88,16 +100,18 @@ export default function DashboardPage() {
       detail: 'Unpaid balance',
     });
   }
-  if (!isCashier) {
+  if (!isCashier && !isFrontDesk) {
     statCards.push({
       title: 'Total Invoiced', value: formatCurrency(stats.total_invoiced), icon: 'receipt', variant: 'amber',
       detail: 'Lifetime invoice total',
     });
   }
-  statCards.push({
-    title: 'Appointments Completed', value: stats.completed_appointments, icon: 'check', variant: 'teal',
-    detail: 'Today',
-  });
+  if (!isCashier) {
+    statCards.push({
+      title: 'Appointments Completed', value: stats.completed_appointments, icon: 'check', variant: 'teal',
+      detail: 'Today',
+    });
+  }
 
   const statIcons: Record<string, string> = {
     calendar: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
@@ -163,6 +177,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts + Today's Schedule */}
+      {!isCashier && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
         <div className="wellness-card animate-fade-in">
@@ -170,16 +185,16 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="section-title">Revenue</p>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50">Monthly Revenue</h3>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50">{isDoctor ? 'Daily Revenue' : 'Monthly Revenue'}</h3>
               </div>
-              <span className="text-xs text-gray-400 dark:text-gray-500">Last 6 months</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{isDoctor ? 'Last 7 days' : 'Last 6 months'}</span>
             </div>
           </div>
           <div className="wellness-card-body">
             <ResponsiveContainer width="100%" height={260}>
-              <LineChart data={stats.monthly_revenue}>
+              <LineChart data={isDoctor ? stats.daily_revenue : stats.monthly_revenue}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" strokeOpacity={0.5} />
-                <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <XAxis dataKey={isDoctor ? 'day' : 'month'} tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={isDoctor ? (v: string) => { const d = new Date(v); return `${d.getMonth()+1}/${d.getDate()}`; } : undefined} />
                 <YAxis tick={{ fontSize: 12, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`} />
                 <Tooltip content={<ChartTooltip formatter={(v: number) => formatCurrency(v)} />} />
                 <Line type="monotone" dataKey="revenue" stroke="#179f8f" strokeWidth={2.5} dot={{ r: 4, fill: '#179f8f', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6, fill: '#179f8f' }} />
@@ -212,8 +227,10 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Lower section */}
+      {!isCashier && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Pie Chart */}
         <div className="wellness-card animate-fade-in">
@@ -299,6 +316,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Outstanding Balances */}
       {stats.outstanding_balances?.length > 0 && (
@@ -342,6 +360,57 @@ export default function DashboardPage() {
                     {r.status}
                   </Tag>
                 )}</CellT>
+              </Column>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {/* Unattached Invoices — invoices not linked to any doctor */}
+      {!isCashier && !isDoctor && !isFrontDesk && stats.unattached_invoices?.length > 0 && (
+        <div className="wellness-card animate-fade-in border-2 border-amber-200 dark:border-amber-800">
+          <div className="wellness-card-header bg-amber-50 dark:bg-amber-900/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="section-title text-amber-700 dark:text-amber-400">Audit Alert</p>
+                <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50">Invoices Without Doctor Assignment</h3>
+              </div>
+              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">{stats.unattached_invoices.length} invoice(s)</span>
+            </div>
+          </div>
+          <div className="wellness-card-body pt-0">
+            <div className="mb-3 mt-3 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/10 rounded-lg p-3">
+                These invoices are not assigned to any medical practitioner. 
+              Please assign a doctor to the patient so their invoices appear in the correct practitioner dashboard.
+            </div>
+            <Table data={stats.unattached_invoices.slice(0, 10)} autoHeight rowHeight={52}>
+              <Column width={140}>
+                <Table.HeaderCell>Invoice #</Table.HeaderCell>
+                <CellT>{(r: any) => <span className="font-medium text-gray-900 dark:text-gray-100">{r.invoice_number}</span>}</CellT>
+              </Column>
+              <Column width={170}>
+                <Table.HeaderCell>Patient</Table.HeaderCell>
+                <CellT>{(r: any) => r.patient_name}</CellT>
+              </Column>
+              <Column width={120} align="right">
+                <Table.HeaderCell>Total</Table.HeaderCell>
+                <CellT>{(r: any) => formatCurrency(r.total)}</CellT>
+              </Column>
+              <Column width={120} align="right">
+                <Table.HeaderCell>Balance</Table.HeaderCell>
+                <CellT>{(r: any) => <span className="font-semibold text-red-600 dark:text-red-400">{formatCurrency(r.balance)}</span>}</CellT>
+              </Column>
+              <Column width={110}>
+                <Table.HeaderCell>Status</Table.HeaderCell>
+                <CellT>{(r: any) => (
+                  <Tag color={r.status === 'Paid' ? 'green' : r.status === 'Partial' ? 'yellow' : r.status === 'Overdue' ? 'red' : 'orange'}>
+                    {r.status}
+                  </Tag>
+                )}</CellT>
+              </Column>
+              <Column width={160}>
+                <Table.HeaderCell>Processed By</Table.HeaderCell>
+                <CellT>{(r: any) => <span className="text-gray-700 dark:text-gray-300">{r.processed_by || '—'}</span>}</CellT>
               </Column>
             </Table>
           </div>
