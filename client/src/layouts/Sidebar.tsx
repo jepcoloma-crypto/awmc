@@ -56,7 +56,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {/* Brand */}
         <div className="flex items-center h-16 px-5 border-b shrink-0" style={{ borderColor: 'var(--sidebar-border)' }}>
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0b6e4f] to-[#2ec4b6] flex items-center justify-center shrink-0 shadow-lg shadow-[#0b6e4f]/20">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0ea89a] to-[#2ec4b6] flex items-center justify-center shrink-0 shadow-lg shadow-[#0ea89a]/20">
               <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
@@ -81,11 +81,11 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
                 onMouseLeave={() => setHoveredItem(null)}
                 className={({ isActive }) => {
                   const active = isActive || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
-                  return `group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    active
-                      ? 'font-semibold border-l-[3px]'
-                      : ''
-                  }`;
+                   return `group relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                     active
+                       ? 'font-semibold'
+                       : 'hover:bg-[var(--sidebar-hover)]'
+                   }`;
                 }}
                 style={({ isActive }) => {
                   const active = isActive || (item.path !== '/dashboard' && location.pathname.startsWith(item.path));

@@ -9,7 +9,7 @@ import { Table, Tag } from 'rsuite';
 
 const { Column, Cell: CellT } = Table;
 
-const PIE_COLORS = ['#0b6e4f', '#2ec4b6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const PIE_COLORS = ['#0ea89a', '#2ec4b6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
 function ChartTooltip({ active, payload, label, formatter }: any) {
   if (active && payload && payload.length) {
@@ -150,17 +150,17 @@ export default function DashboardPage() {
           >
             <div className="flex items-start justify-between mb-3">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                card.variant === 'blue' ? 'bg-[#e8f5e9] dark:bg-[#0b6e4f]/20' :
+                card.variant === 'blue' ? 'bg-[#eefbfa] dark:bg-[#0ea89a]/20' :
                 card.variant === 'green' ? 'bg-green-100 dark:bg-green-900/30' :
-                card.variant === 'teal' ? 'bg-[#e8f5e9] dark:bg-[#0b6e4f]/20' :
+                card.variant === 'teal' ? 'bg-[#eefbfa] dark:bg-[#0ea89a]/20' :
                 card.variant === 'amber' ? 'bg-amber-100 dark:bg-amber-900/30' :
                 card.variant === 'rose' ? 'bg-rose-100 dark:bg-rose-900/30' :
                 'bg-gray-100 dark:bg-gray-800'
               }`}>
                 <svg className={`w-5 h-5 ${
-                  card.variant === 'blue' ? 'text-[#0b6e4f] dark:text-[#2ec4b6]' :
+                  card.variant === 'blue' ? 'text-[#0ea89a] dark:text-[#2ec4b6]' :
                   card.variant === 'green' ? 'text-green-600 dark:text-green-400' :
-                  card.variant === 'teal' ? 'text-[#0b6e4f] dark:text-[#2ec4b6]' :
+                  card.variant === 'teal' ? 'text-[#0ea89a] dark:text-[#2ec4b6]' :
                   card.variant === 'amber' ? 'text-amber-600 dark:text-amber-400' :
                   card.variant === 'rose' ? 'text-rose-600 dark:text-rose-400' :
                   'text-gray-600 dark:text-gray-400'
@@ -272,7 +272,7 @@ export default function DashboardPage() {
               </div>
               <button
                 onClick={() => navigate('/appointments')}
-                className="text-xs text-[#0b6e4f] dark:text-[#2ec4b6] hover:text-[#085a3f] font-medium"
+                className="text-xs text-[#0ea89a] dark:text-[#2ec4b6] hover:text-[#0a877d] font-medium"
               >
                 View all &rarr;
               </button>
@@ -329,7 +329,7 @@ export default function DashboardPage() {
               </div>
               <button
                 onClick={() => navigate('/billing')}
-                className="text-xs text-[#0b6e4f] dark:text-[#2ec4b6] hover:text-[#085a3f] font-medium"
+                className="text-xs text-[#0ea89a] dark:text-[#2ec4b6] hover:text-[#0a877d] font-medium"
               >
                 View all &rarr;
               </button>
