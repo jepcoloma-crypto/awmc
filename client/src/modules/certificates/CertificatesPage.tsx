@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import apiClient from '@/api/client';
 import { Table, Tag, Button, Modal, SelectPicker, Input, DatePicker, Notification, useToaster } from 'rsuite';
 import { formatDate, formatCurrency, toLocalDateString } from '@/lib/utils';
@@ -8,7 +8,7 @@ const { Column, Cell } = Table;
 
 export default function CertificatesPage() {
   const toaster = useToaster();
-  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [certificates, setCertificates] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]);
   const [doctors, setDoctors] = useState<any[]>([]);
@@ -35,8 +35,17 @@ export default function CertificatesPage() {
       setPatients(pRes.data.data);
       setDoctors(dRes.data.data);
       setLoading(false);
+      // Auto-open create modal if patient query param is present
+      const patientParam = searchParams.get('patient');
+      if (patientParam) {
+        const pid = parseInt(patientParam);
+        if (!isNaN(pid)) {
+          setForm((prev) => ({ ...prev, patient_id: pid }));
+          setShowCreate(true);
+        }
+      }
     });
-  }, []);
+  }, [searchParams]);
 
   const handleCreate = async () => {
     if (!form.patient_id || !form.doctor_id || !form.diagnosis) return;
