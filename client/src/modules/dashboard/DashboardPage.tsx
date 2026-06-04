@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
 import { StatsCardSkeleton } from '@/components/skeletons/TableSkeleton';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Table, Tag } from 'rsuite';
@@ -411,6 +411,10 @@ export default function DashboardPage() {
                     {r.status}
                   </Tag>
                 )}</CellT>
+              </Column>
+              <Column width={130}>
+                <Table.HeaderCell>Date</Table.HeaderCell>
+                <CellT>{(r: any) => <span className="text-gray-700 dark:text-gray-300">{formatDate(r.created_at)}</span>}</CellT>
               </Column>
               <Column width={160}>
                 <Table.HeaderCell>Processed By</Table.HeaderCell>
