@@ -169,7 +169,9 @@ export default function AppointmentsPage() {
           <Column width={130}><Table.HeaderCell>Actions</Table.HeaderCell>
             <Cell>{(r: Appointment) => (
               <div className="flex gap-1">
-                <IconButton size="sm" appearance="subtle" icon={<EyeRound style={{ color: '#0b6e4f' }} />} onClick={(e) => { e.stopPropagation(); setViewModal(r); }} />
+                <Whisper speaker={<Tooltip>View Details</Tooltip>} placement="top" trigger="hover">
+                  <IconButton size="sm" appearance="subtle" icon={<EyeRound style={{ color: '#0b6e4f' }} />} onClick={(e) => { e.stopPropagation(); setViewModal(r); }} />
+                </Whisper>
                 {r.status === 'Completed' && (
                   <Whisper speaker={<Tooltip>Medical Certificate</Tooltip>} placement="top" trigger="hover">
                     <IconButton size="sm" appearance="subtle" icon={
@@ -177,8 +179,12 @@ export default function AppointmentsPage() {
                     } onClick={(e) => { e.stopPropagation(); navigate(`/certificates?patient=${r.patient_id}`); }} />
                   </Whisper>
                 )}
-                <IconButton size="sm" appearance="subtle" icon={<EditRound style={{ color: '#2563eb' }} />} onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${r.id}/edit`); }} />
-                <IconButton size="sm" appearance="subtle" icon={<Trash style={{ color: '#e53e3e' }} />} onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} />
+                <Whisper speaker={<Tooltip>Edit</Tooltip>} placement="top" trigger="hover">
+                  <IconButton size="sm" appearance="subtle" icon={<EditRound style={{ color: '#2563eb' }} />} onClick={(e) => { e.stopPropagation(); navigate(`/appointments/${r.id}/edit`); }} />
+                </Whisper>
+                <Whisper speaker={<Tooltip>Delete</Tooltip>} placement="top" trigger="hover">
+                  <IconButton size="sm" appearance="subtle" icon={<Trash style={{ color: '#e53e3e' }} />} onClick={(e) => { e.stopPropagation(); setDeleteTarget(r); }} />
+                </Whisper>
               </div>
             )}</Cell>
           </Column>
