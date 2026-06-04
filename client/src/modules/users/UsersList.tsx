@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, Modal, Input, SelectPicker, Notification, useToaster } from 'rsuite';
+import { Table, Tag, Button, Modal, Input, SelectPicker, Notification, useToaster, IconButton, Tooltip, Whisper } from 'rsuite';
+import { EditRound } from '@rsuite/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import type { User, Doctor } from '@/types';
 
@@ -97,15 +98,25 @@ export default function UsersList() {
             <Tag color={r.role === 'Administrator' ? 'red' : r.role === 'Medical Practitioner' ? 'blue' : r.role === 'Front Desk Staff' ? 'cyan' : 'green'}>{r.role}</Tag>
           )}</Cell></Column>
           <Column width={90}><Table.HeaderCell>Status</Table.HeaderCell><Cell>{(r: User) => <Tag color={r.status === 'Active' ? 'green' : 'red'}>{r.status}</Tag>}</Cell></Column>
-          <Column width={150}><Table.HeaderCell>Actions</Table.HeaderCell>
+          <Column width={130}><Table.HeaderCell>Actions</Table.HeaderCell>
             <Cell>{(r: User) => (
               <div className="flex gap-1">
-                <Button size="sm" appearance="link" onClick={() => openEdit(r)}>Edit</Button>
-                <Button size="sm" appearance="link" color="violet" onClick={() => { setPasswordModal(r); setNewPassword(''); }}>Password</Button>
+                <Whisper speaker={<Tooltip>Edit</Tooltip>} placement="top" trigger="hover">
+                  <IconButton size="sm" appearance="subtle" icon={<EditRound style={{ color: '#2563eb' }} />} onClick={() => openEdit(r)} />
+                </Whisper>
+                <Whisper speaker={<Tooltip>Reset Password</Tooltip>} placement="top" trigger="hover">
+                  <IconButton size="sm" appearance="subtle" icon={
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  } onClick={() => { setPasswordModal(r); setNewPassword(''); }} />
+                </Whisper>
                 {r.id !== currentUser?.id && (
-                  <Button size="sm" appearance="link" color={r.status === 'Active' ? 'orange' : 'green'} onClick={() => toggleStatus(r)}>
-                    {r.status === 'Active' ? 'Disable' : 'Enable'}
-                  </Button>
+                  <Whisper speaker={<Tooltip>{r.status === 'Active' ? 'Disable' : 'Enable'}</Tooltip>} placement="top" trigger="hover">
+                    <IconButton size="sm" appearance="subtle" icon={
+                      r.status === 'Active'
+                        ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e53e3e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 1 2.81 1.09 1.14 1.14 0 0 1 .5 1.48l-.97 2.26a1.28 1.28 0 0 1-1.43.81 14.85 14.85 0 0 1-8.82-5.18 14.85 14.85 0 0 1-5.18-8.82 1.28 1.28 0 0 1 .81-1.43l2.26-.97a1.14 1.14 0 0 1 1.48.5 12.84 12.84 0 0 1 1.09 2.81 2 2 0 0 1-.45 2.11L13.31 10.68"/></svg>
+                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    } onClick={() => toggleStatus(r)} />
+                  </Whisper>
                 )}
               </div>
             )}</Cell>
