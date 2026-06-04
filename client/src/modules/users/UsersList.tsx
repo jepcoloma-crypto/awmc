@@ -22,6 +22,9 @@ export default function UsersList() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [editModal, setEditModal] = useState<any>(null);
+  const [passwordModal, setPasswordModal] = useState<any>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     Promise.all([apiClient.get('/users'), apiClient.get('/doctors')]).then(([uRes, dRes]) => {
@@ -46,6 +49,21 @@ export default function UsersList() {
     id: u.id, first_name: u.first_name, last_name: u.last_name,
     email: u.email, role: u.role, doctor_id: u.doctor_id,
   });
+
+  const resetPassword = async () => {
+    if (!newPassword || newPassword.length < 4) return;
+    setSavingPassword(true);
+    try {
+      await apiClient.put(`/users/${passwordModal.id}/password`, { password: newPassword });
+      toaster.push(<Notification type="success" header="Password Reset">Password changed successfully</Notification>, { placement: 'topEnd' });
+      setPasswordModal(null);
+      setNewPassword('');
+    } catch {
+      toaster.push(<Notification type="error" header="Error">Failed to reset password</Notification>, { placement: 'topEnd' });
+    } finally {
+      setSavingPassword(false);
+    }
+  };
 
   const saveEdit = async () => {
     try {
@@ -83,6 +101,7 @@ export default function UsersList() {
             <Cell>{(r: User) => (
               <div className="flex gap-1">
                 <Button size="sm" appearance="link" onClick={() => openEdit(r)}>Edit</Button>
+                <Button size="sm" appearance="link" color="violet" onClick={() => { setPasswordModal(r); setNewPassword(''); }}>Password</Button>
                 {r.id !== currentUser?.id && (
                   <Button size="sm" appearance="link" color={r.status === 'Active' ? 'orange' : 'green'} onClick={() => toggleStatus(r)}>
                     {r.status === 'Active' ? 'Disable' : 'Enable'}
@@ -93,6 +112,20 @@ export default function UsersList() {
           </Column>
         </Table>
       </div>
+
+      <Modal open={!!passwordModal} onClose={() => setPasswordModal(null)} size="xs">
+        <Modal.Header><Modal.Title>Reset Password</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            New password for <strong>{passwordModal?.first_name} {passwordModal?.last_name}</strong> ({passwordModal?.username})
+          </p>
+          <Input type="password" value={newPassword} onChange={setNewPassword} placeholder="Enter new password (min 4 characters)" />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button appearance="primary" onClick={resetPassword} loading={savingPassword} disabled={!newPassword || newPassword.length < 4}>Reset Password</Button>
+          <Button appearance="default" onClick={() => setPasswordModal(null)}>Cancel</Button>
+        </Modal.Footer>
+      </Modal>
 
       <Modal open={!!editModal} onClose={() => setEditModal(null)} size="sm">
         <Modal.Header><Modal.Title>Edit User</Modal.Title></Modal.Header>

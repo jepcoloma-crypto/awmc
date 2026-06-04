@@ -56,4 +56,24 @@ router.put('/:id', authMiddleware, requireRole('Administrator'), async (req, res
   }
 });
 
+router.put('/:id/password', authMiddleware, requireRole('Administrator'), async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+    const pwHash = await bcrypt.hash(password, 10);
+    const result = await query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, username',
+      [pwHash, req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    res.json({ message: 'Password updated' });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
