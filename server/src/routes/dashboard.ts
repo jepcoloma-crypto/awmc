@@ -36,7 +36,15 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res) => {
     const activePatients = await query("SELECT COUNT(*) FROM patients WHERE status = $1", ['Active']);
 
     const invoices = await query(
-      `SELECT COALESCE(SUM(total),0) as total_invoiced, COALESCE(SUM(paid_amount),0) as total_collected, COALESCE(SUM(balance),0) as total_outstanding FROM invoices i WHERE 1=1${isDoctor && doctorId ? ' AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id AND pd.doctor_id = $1)' : ''}`,
+      `SELECT COALESCE(SUM(total),0) as total_invoiced, COALESCE(SUM(balance),0) as total_outstanding FROM invoices i WHERE 1=1${isDoctor && doctorId ? ' AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id AND pd.doctor_id = $1)' : ''}`,
+      isDoctor && doctorId ? [doctorId] : []
+    );
+
+    const totalCollectedRes = await query(
+      `SELECT COALESCE(SUM(p.amount),0) as total_collected
+       FROM payments p
+       JOIN invoices i ON p.invoice_id = i.id
+       WHERE 1=1${isDoctor && doctorId ? ' AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id AND pd.doctor_id = $1)' : ''}`,
       isDoctor && doctorId ? [doctorId] : []
     );
 
@@ -125,7 +133,7 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res) => {
       total_collected_today: parseFloat(todayCollected.rows[0].total) || 0,
       prof_fee_collected_today: parseFloat(todayProfFee.rows[0].total) || 0,
       total_outstanding: parseFloat(invoices.rows[0].total_outstanding) || 0,
-      total_collected: parseFloat(invoices.rows[0].total_collected) || 0,
+      total_collected: parseFloat(totalCollectedRes.rows[0].total_collected) || 0,
       total_invoiced: parseFloat(invoices.rows[0].total_invoiced) || 0,
       monthly_revenue: monthlyRevenue.rows.map((r: any) => ({ month: r.month, revenue: parseFloat(r.revenue) })),
       daily_revenue: dailyRevenue.rows.map((r: any) => ({ day: r.day, revenue: parseFloat(r.revenue) })),
