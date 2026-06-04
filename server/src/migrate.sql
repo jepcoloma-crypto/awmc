@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS doctors (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'doctors_name_unique') THEN
+    ALTER TABLE doctors ADD CONSTRAINT doctors_name_unique UNIQUE (first_name, last_name);
+  END IF;
+END $$;
+
 -----------------------------------------------
 -- 2. TABLES WITH FK TO DOCTORS
 -----------------------------------------------
