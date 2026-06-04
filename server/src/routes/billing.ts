@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { query } from '../db';
-import { authMiddleware, type AuthRequest } from '../middleware/auth';
+import { authMiddleware, requireRole, type AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
@@ -121,7 +121,7 @@ router.post('/:id/payment', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, requireRole('Administrator'), async (req, res) => {
   try {
     const { items } = req.body;
     if (!items || !Array.isArray(items)) {
@@ -176,7 +176,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
   }
 });
 
-router.delete('/:id', authMiddleware, async (req, res) => {
+router.delete('/:id', authMiddleware, requireRole('Administrator'), async (req, res) => {
   try {
     const result = await query('DELETE FROM invoices WHERE id=$1 RETURNING id', [req.params.id]);
     if (result.rows.length === 0) {

@@ -100,7 +100,7 @@ export default function BillingList() {
         />
       </div>
 
-      <div className="wellness-card">
+      <div className="wellness-card table-responsive">
         <Table data={invoices} loading={loading} autoHeight rowHeight={60} onRowClick={(rowData) => navigate(`/billing/${rowData.id}`)}>
           <Column width={180}><Table.HeaderCell>Invoice #</Table.HeaderCell><Cell>{(r: Invoice) => <span className="block font-mono font-semibold text-gray-900 dark:text-gray-100 truncate">{r.invoice_number}</span>}</Cell></Column>
           <Column flexGrow={1} minWidth={220}><Table.HeaderCell>Patient</Table.HeaderCell><Cell>{(r: Invoice) => <span className="block font-medium text-gray-800 dark:text-gray-200 truncate">{r.patient_name}</span>}</Cell></Column>

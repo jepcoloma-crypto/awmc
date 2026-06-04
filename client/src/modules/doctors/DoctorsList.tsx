@@ -81,7 +81,7 @@ export default function DoctorsList() {
         )}
       </div>
 
-      <div className="wellness-card">
+      <div className="wellness-card table-responsive">
         <Table data={doctors} loading={loading} autoHeight rowHeight={52}>
           <Column width={50}><Table.HeaderCell>#</Table.HeaderCell><Cell>{(r: Doctor, idx?: number) => (idx ?? 0) + 1}</Cell></Column>
           <Column width={220}><Table.HeaderCell>Name</Table.HeaderCell><Cell>{(r: Doctor) => <span className="font-medium text-gray-900 dark:text-gray-100">Dr. {r.first_name} {r.last_name}</span>}</Cell></Column>

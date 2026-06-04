@@ -218,7 +218,7 @@ export default function InvoiceAdd() {
               <Button appearance="ghost" size="sm" disabled={!patientId} onClick={() => setShowMedicine(true)}>Medicine</Button>
             </div>
           </div>
-          <Table data={items} autoHeight rowHeight={48}>
+          <div className="table-responsive"><Table data={items} autoHeight rowHeight={48}>
             <Column width={200} flexGrow={1}>
               <Table.HeaderCell>Description</Table.HeaderCell>
               <Cell>{(rowData: LineItem) => rowData.description}</Cell>
@@ -245,7 +245,7 @@ export default function InvoiceAdd() {
                 return <Button size="sm" appearance="link" color="red" onClick={() => removeItem(idx)}>×</Button>;
               }}</Cell>
             </Column>
-          </Table>
+          </Table></div>
         </div>
 
         <div className="border-t border-gray-200 dark:border-gray-700 pt-4">

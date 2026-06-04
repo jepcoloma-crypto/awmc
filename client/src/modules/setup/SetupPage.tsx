@@ -173,7 +173,7 @@ export default function SetupPage() {
       </div>
 
       {activeTab === 'services' ? (
-        <div className="bg-white dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm">
+        <div className="bg-white dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm table-responsive">
           <Table data={services} loading={loading} rowHeight={52} headerHeight={44} autoHeight>
             <Column width={48} align="center">
               <HeaderCell><span className="block w-full text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">#</span></HeaderCell>
@@ -202,7 +202,7 @@ export default function SetupPage() {
           </Table>
         </div>
       ) : (
-        <div className="bg-white dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm">
+        <div className="bg-white dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 shadow-sm table-responsive">
           <Table data={procedures} loading={loading} rowHeight={52} headerHeight={44} autoHeight>
             <Column width={48} align="center">
               <HeaderCell><span className="block w-full text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-center">#</span></HeaderCell>

@@ -133,7 +133,7 @@ export default function ReportsPage() {
 
       {auditData && (
         <div className="space-y-4">
-          <div className="wellness-card p-4">
+          <div className="wellness-card p-4 table-responsive">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50">Cashier Collection Summary ({groupBy})</h3>
               <span className="text-sm font-bold text-[#0b6e4f]">{formatCurrency(auditData.grand_total)}</span>
@@ -150,7 +150,7 @@ export default function ReportsPage() {
             </Table>
           </div>
 
-          <div className="wellness-card p-4">
+          <div className="wellness-card p-4 table-responsive">
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-50 mb-3">Transaction Details</h3>
             <Table data={auditData.details} autoHeight rowHeight={48}>
               <Column width={140}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: any) => formatDate(r.payment_date)}</Cell></Column>
@@ -166,7 +166,7 @@ export default function ReportsPage() {
       )}
 
       {data.length > 0 && !auditData && (
-        <div className="wellness-card p-4">
+        <div className="wellness-card p-4 table-responsive">
           {reportType === 'appointments' && (
             <Table data={data} autoHeight rowHeight={48}>
               <Column width={100}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: Appointment) => r.appointment_date}</Cell></Column>

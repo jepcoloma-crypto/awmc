@@ -78,7 +78,7 @@ export default function PatientView() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 table-responsive">
         <div className="flex items-center justify-between mb-4">
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Appointment History</h4>
         </div>

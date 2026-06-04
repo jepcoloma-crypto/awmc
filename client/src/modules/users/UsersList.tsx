@@ -69,7 +69,7 @@ export default function UsersList() {
         <Button appearance="primary" onClick={() => navigate('/users/add')}>+ Add User</Button>
       </div>
 
-      <div className="wellness-card">
+      <div className="wellness-card table-responsive">
         <Table data={users} loading={loading} autoHeight rowHeight={52}>
           <Column width={50}><Table.HeaderCell>#</Table.HeaderCell><Cell>{(r: any, idx?: number) => (idx ?? 0) + 1}</Cell></Column>
           <Column width={140}><Table.HeaderCell>Username</Table.HeaderCell><Cell>{(r: User) => <span className="font-mono text-sm">{r.username}</span>}</Cell></Column>

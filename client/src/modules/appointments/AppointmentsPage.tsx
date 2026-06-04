@@ -129,7 +129,7 @@ export default function AppointmentsPage() {
         />
       </div>
 
-      <div className="wellness-card p-4">
+      <div className="wellness-card p-4 table-responsive">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="section-title">Appointment List</p>

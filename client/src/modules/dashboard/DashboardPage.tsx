@@ -263,7 +263,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Today's Schedule */}
-        <div className="wellness-card lg:col-span-2 animate-fade-in">
+        <div className="wellness-card lg:col-span-2 animate-fade-in table-responsive">
           <div className="wellness-card-header">
             <div className="flex items-center justify-between">
               <div>
@@ -320,7 +320,7 @@ export default function DashboardPage() {
 
       {/* Outstanding Balances */}
       {stats.outstanding_balances?.length > 0 && (
-        <div className="wellness-card animate-fade-in">
+        <div className="wellness-card animate-fade-in table-responsive">
           <div className="wellness-card-header">
             <div className="flex items-center justify-between">
               <div>
@@ -368,7 +368,7 @@ export default function DashboardPage() {
 
       {/* Unattached Invoices — invoices not linked to any doctor */}
       {!isCashier && !isDoctor && !isFrontDesk && stats.unattached_invoices?.length > 0 && (
-        <div className="wellness-card animate-fade-in border-2 border-amber-200 dark:border-amber-800">
+        <div className="wellness-card animate-fade-in border-2 border-amber-200 dark:border-amber-800 table-responsive">
           <div className="wellness-card-header bg-amber-50 dark:bg-amber-900/20">
             <div className="flex items-center justify-between">
               <div>

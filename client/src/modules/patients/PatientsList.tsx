@@ -79,7 +79,7 @@ export default function PatientsList() {
         />
       </div>
 
-      <div className="wellness-card">
+      <div className="wellness-card table-responsive">
         <Table data={patients} loading={loading} autoHeight rowHeight={52}>
           <Column width={110}>
             <Table.HeaderCell>Patient ID</Table.HeaderCell>

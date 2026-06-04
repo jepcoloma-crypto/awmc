@@ -551,3 +551,74 @@ a.fc-daygrid-day-number {
 .animate-fade-in-delay-2 { animation-delay: 0.1s; }
 .animate-fade-in-delay-3 { animation-delay: 0.15s; }
 .animate-fade-in-delay-4 { animation-delay: 0.2s; }
+
+/* ─── Responsive: Table horizontal scroll ─── */
+.table-responsive {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-responsive .rs-table {
+  min-width: 640px;
+}
+
+/* ─── Responsive: Mobile modal full-width ─── */
+@media (max-width: 767px) {
+  .rs-modal {
+    width: auto !important;
+    margin: 10px;
+  }
+  .rs-modal-content {
+    border-radius: var(--radius-lg) !important;
+  }
+  .rs-modal-body {
+    padding: var(--space-md) !important;
+  }
+}
+
+/* ─── Responsive: Stack stat cards label inline ─── */
+@media (max-width: 639px) {
+  .wellness-stat-card {
+    padding: var(--space-md);
+  }
+  .section-title {
+    margin-bottom: var(--space-sm);
+  }
+  .wellness-card {
+    padding: var(--space-md);
+  }
+  .wellness-card-header {
+    padding: 0 0 var(--space-sm) 0;
+  }
+  .wellness-card-body {
+    padding: 0;
+  }
+}
+
+/* ─── Responsive: FullCalendar mobile ─── */
+@media (max-width: 767px) {
+  .fc .fc-toolbar {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 0.9rem;
+  }
+  .fc-header-toolbar {
+    flex-wrap: wrap;
+    justify-content: center !important;
+  }
+  .fc .fc-button {
+    font-size: 0.7rem !important;
+    padding: 4px 8px !important;
+  }
+}
+
+/* ─── Responsive: Header mobile ─── */
+@media (max-width: 639px) {
+  .table-responsive .rs-table-cell {
+    padding: 8px 10px !important;
+  }
+  .table-responsive .rs-table-header-cell {
+    padding: 8px 10px !important;
+  }
+}

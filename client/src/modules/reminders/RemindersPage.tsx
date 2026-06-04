@@ -119,7 +119,7 @@ export default function RemindersPage() {
         </div>
       </div>
 
-      <div className="wellness-card p-5">
+      <div className="wellness-card p-5 table-responsive">
         <p className="section-title">All Reminders</p>
         <Table data={reminders} loading={loading} autoHeight rowHeight={56}>
           <Column width={300} flexGrow={1}><Table.HeaderCell>Message</Table.HeaderCell><Cell>{(r: Reminder) => <div className="truncate max-w-sm">{r.message}</div>}</Cell></Column>
