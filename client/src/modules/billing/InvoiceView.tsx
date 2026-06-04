@@ -21,8 +21,6 @@ export default function InvoiceView() {
   // Edit items modal state
   const [showEdit, setShowEdit] = useState(false);
   const [editItems, setEditItems] = useState<any[]>([]);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [passwordError, setPasswordError] = useState('');
   const [services, setServices] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<number | null>(null);
   const [showDoctorFeeModal, setShowDoctorFeeModal] = useState(false);
@@ -31,6 +29,11 @@ export default function InvoiceView() {
   const [showMedicineModal, setShowMedicineModal] = useState(false);
   const [medicineForm, setMedicineForm] = useState({ name: '', quantity: 1, unitPrice: 0 });
   const [saving, setSaving] = useState(false);
+
+  // Admin password confirmation modal
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     loadInvoice();
@@ -63,8 +66,6 @@ export default function InvoiceView() {
 
   const openEdit = () => {
     setEditItems(JSON.parse(JSON.stringify(invoice?.items || [])));
-    setAdminPassword('');
-    setPasswordError('');
     setShowEdit(true);
     if (invoice?.patient_id) {
       apiClient.get(`/patients/${invoice.patient_id}`).then((res) => {
@@ -126,6 +127,7 @@ export default function InvoiceView() {
     try {
       await apiClient.put(`/billing/${id}`, { items: editItems, password: adminPassword });
       toaster.push(<Notification type="success" header="Success">Invoice items updated</Notification>, { placement: 'topEnd' });
+      setShowConfirmModal(false);
       setShowEdit(false);
       loadInvoice();
     } catch (err: any) {
@@ -606,20 +608,27 @@ export default function InvoiceView() {
               <span className="text-base font-semibold text-gray-800 dark:text-gray-200">Total</span>
               <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(editSubtotal * 1.1)}</span>
             </div>
-
-            {/* Admin password confirmation */}
-            <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
-              <Input type="password" value={adminPassword} onChange={(v) => { setAdminPassword(v); setPasswordError(''); }} placeholder="Enter your password to confirm changes" />
-              {passwordError && <p className="text-sm text-red-600 dark:text-red-400 mt-1">{passwordError}</p>}
-            </div>
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button appearance="primary" onClick={handleSaveItems} disabled={editItems.length === 0 || saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
+          <Button appearance="primary" onClick={() => { setAdminPassword(''); setPasswordError(''); setShowConfirmModal(true); }} disabled={editItems.length === 0}>
+            Save Changes
           </Button>
           <Button appearance="default" onClick={() => setShowEdit(false)}>Cancel</Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Admin password confirmation popup */}
+      <Modal open={showConfirmModal} onClose={() => setShowConfirmModal(false)} size="xs">
+        <Modal.Header><Modal.Title>Confirm Changes</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Enter your admin password to save the edited invoice items.</p>
+          <Input type="password" value={adminPassword} onChange={(v) => { setAdminPassword(v); setPasswordError(''); }} placeholder="Admin password" />
+          {passwordError && <p className="text-sm text-red-600 dark:text-red-400 mt-2">{passwordError}</p>}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button appearance="primary" onClick={handleSaveItems} loading={saving}>Confirm</Button>
+          <Button appearance="default" onClick={() => setShowConfirmModal(false)}>Cancel</Button>
         </Modal.Footer>
       </Modal>
 
