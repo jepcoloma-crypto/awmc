@@ -121,7 +121,7 @@ router.post('/:id/payment', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-router.put('/:id', authMiddleware, requireRole('Administrator'), async (req, res) => {
+router.put('/:id', authMiddleware, async (req, res) => {
   try {
     const { items } = req.body;
     if (!items || !Array.isArray(items)) {
