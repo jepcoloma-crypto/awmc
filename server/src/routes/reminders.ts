@@ -67,4 +67,36 @@ router.get('/today-scheduled', authMiddleware, async (req: AuthRequest, res) => 
   }
 });
 
+router.get('/outstanding-patients', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    let sql = `
+      SELECT DISTINCT p.id, p.first_name, p.last_name, p.phone, i.balance
+      FROM patients p
+      JOIN invoices i ON i.patient_id = p.id
+      WHERE i.balance > 0
+      ORDER BY i.balance DESC`;
+    const params: any[] = [];
+    let idx = 1;
+
+    if (req.user!.role === 'Medical Practitioner') {
+      const userRes = await query('SELECT doctor_id FROM users WHERE id = $1', [req.user!.id]);
+      if (userRes.rows[0]?.doctor_id) {
+        sql = `
+          SELECT DISTINCT p.id, p.first_name, p.last_name, p.phone, i.balance
+          FROM patients p
+          JOIN invoices i ON i.patient_id = p.id
+          WHERE i.balance > 0
+            AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = p.id AND pd.doctor_id = $${idx})
+          ORDER BY i.balance DESC`;
+        params.push(userRes.rows[0].doctor_id);
+      }
+    }
+
+    const result = await query(sql, params);
+    res.json({ data: result.rows, total: result.rows.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

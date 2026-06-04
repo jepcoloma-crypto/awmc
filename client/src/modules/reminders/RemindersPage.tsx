@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import apiClient from '@/api/client';
 import { Table, Tag, Button, Modal, Input, SelectPicker, Notification, useToaster } from 'rsuite';
-import { formatDate, formatTimeHHMM } from '@/lib/utils';
+import { formatDate, formatTimeHHMM, formatCurrency } from '@/lib/utils';
 import type { Reminder, Patient, Appointment } from '@/types';
 
 const { Column, Cell } = Table;
@@ -13,14 +13,16 @@ export default function RemindersPage() {
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [outstandingPatients, setOutstandingPatients] = useState<any[]>([]);
   const [form, setForm] = useState({ patient_id: null as number | null, type: 'Manual' as string, message: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    Promise.all([apiClient.get('/reminders'), apiClient.get('/patients'), apiClient.get('/reminders/today-scheduled')]).then(([rRes, pRes, tRes]) => {
+    Promise.all([apiClient.get('/reminders'), apiClient.get('/patients'), apiClient.get('/reminders/today-scheduled'), apiClient.get('/reminders/outstanding-patients')]).then(([rRes, pRes, tRes, oRes]) => {
       setReminders(rRes.data.data);
       setPatients(pRes.data.data);
       setTodayAppointments(tRes.data.data);
+      setOutstandingPatients(oRes.data.data);
       setLoading(false);
     });
   }, []);
@@ -41,8 +43,6 @@ export default function RemindersPage() {
       setSaving(false);
     }
   };
-
-  const outstandingPatients = patients.slice(0, 3);
 
   return (
     <div className="space-y-5">
@@ -89,8 +89,11 @@ export default function RemindersPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">No outstanding balances.</p>
           ) : (
             <ul className="space-y-1.5 text-sm">
-              {outstandingPatients.map((p) => (
-                <li key={p.id} className="text-gray-700 dark:text-gray-300">{p.first_name} {p.last_name}</li>
+              {outstandingPatients.slice(0, 5).map((p) => (
+                <li key={p.id} className="flex items-center justify-between text-gray-700 dark:text-gray-300">
+                  <span>{p.first_name} {p.last_name}</span>
+                  <span className="font-semibold text-red-600">{formatCurrency(parseFloat(String(p.balance)))}</span>
+                </li>
               ))}
             </ul>
           )}
