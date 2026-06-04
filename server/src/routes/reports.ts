@@ -113,4 +113,32 @@ router.get('/cashier-audit', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
+router.get('/unattached', authMiddleware, async (req: AuthRequest, res) => {
+  try {
+    const { from, to } = req.query;
+    const result = await query(`
+      SELECT i.*,
+        CONCAT(p.first_name, ' ', p.last_name) as patient_name,
+        (SELECT CONCAT(u.first_name, ' ', u.last_name) FROM payments pm
+         LEFT JOIN users u ON pm.created_by = u.id
+         WHERE pm.invoice_id = i.id
+         ORDER BY pm.payment_date DESC LIMIT 1) as processed_by
+      FROM invoices i
+      JOIN patients p ON i.patient_id = p.id
+      WHERE NOT EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id)
+        AND i.created_at >= $1 AND i.created_at <= $2
+      ORDER BY i.created_at DESC
+    `, [from, to]);
+
+    const totalAmount = result.rows.reduce((s: number, r: any) => s + parseFloat(r.total), 0);
+    res.json({
+      data: result.rows,
+      total_count: result.rows.length,
+      total_amount: totalAmount,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

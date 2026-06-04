@@ -6,7 +6,7 @@ import type { Appointment, Invoice, Payment } from '@/types';
 
 const { Column, Cell } = Table;
 
-type ReportType = 'appointments' | 'patients' | 'financial' | 'outstanding' | 'cashier-audit';
+type ReportType = 'appointments' | 'patients' | 'financial' | 'outstanding' | 'cashier-audit' | 'unattached';
 
 export default function ReportsPage() {
   const toaster = useToaster();
@@ -51,6 +51,12 @@ export default function ReportsPage() {
         });
         setAuditData(res.data);
         setSummary(`Grand total: ${formatCurrency(res.data.grand_total)} | Periods: ${res.data.summary.length}`);
+      } else if (reportType === 'unattached') {
+        const res = await apiClient.get('/reports/unattached', {
+          params: { from: fromDate || '2026-01-01', to: toDate || '2026-12-31' }
+        });
+        setData(res.data.data);
+        setSummary(`Total invoices: ${res.data.total_count} | Total amount: ${formatCurrency(res.data.total_amount)}`);
       }
     } catch {
       toaster.push(<Notification type="error" header="Error">Failed to generate report</Notification>, { placement: 'topEnd' });
@@ -93,6 +99,7 @@ export default function ReportsPage() {
                 { label: 'Financial Report', value: 'financial' },
                 { label: 'Outstanding Balances', value: 'outstanding' },
                 { label: 'Cashier Audit', value: 'cashier-audit' },
+                { label: 'Unassigned Invoices', value: 'unattached' },
               ]}
               value={reportType}
               onChange={(v) => { setReportType(v as ReportType); setData([]); setSummary(''); setAuditData(null); }}
@@ -204,6 +211,17 @@ export default function ReportsPage() {
               <Column width={120} align="right"><Table.HeaderCell>Total</Table.HeaderCell><Cell>{(r: Invoice) => formatCurrency(parseFloat(String(r.total)))}</Cell></Column>
               <Column width={120} align="right"><Table.HeaderCell>Balance</Table.HeaderCell><Cell>{(r: Invoice) => <span className="font-semibold text-red-600">{formatCurrency(parseFloat(String(r.balance)))}</span>}</Cell></Column>
               <Column width={110}><Table.HeaderCell>Status</Table.HeaderCell><Cell>{(r: Invoice) => <Tag color={r.status === 'Partial' ? 'yellow' : r.status === 'Overdue' ? 'red' : 'orange'}>{r.status}</Tag>}</Cell></Column>
+            </Table>
+          )}
+          {reportType === 'unattached' && (
+            <Table data={data} autoHeight rowHeight={48}>
+              <Column width={140}><Table.HeaderCell>Invoice #</Table.HeaderCell><Cell>{(r: any) => <span className="font-mono text-sm">{r.invoice_number}</span>}</Cell></Column>
+              <Column width={180}><Table.HeaderCell>Patient</Table.HeaderCell><Cell>{(r: any) => <span className="font-medium">{r.patient_name}</span>}</Cell></Column>
+              <Column width={100} align="right"><Table.HeaderCell>Total</Table.HeaderCell><Cell>{(r: any) => formatCurrency(parseFloat(String(r.total)))}</Cell></Column>
+              <Column width={100} align="right"><Table.HeaderCell>Balance</Table.HeaderCell><Cell>{(r: any) => <span className="font-semibold text-red-600">{formatCurrency(parseFloat(String(r.balance)))}</span>}</Cell></Column>
+              <Column width={100}><Table.HeaderCell>Status</Table.HeaderCell><Cell>{(r: any) => <Tag color={r.status === 'Paid' ? 'green' : r.status === 'Partial' ? 'yellow' : r.status === 'Overdue' ? 'red' : 'orange'}>{r.status}</Tag>}</Cell></Column>
+              <Column width={160}><Table.HeaderCell>Processed By</Table.HeaderCell><Cell>{(r: any) => <span className="text-gray-700 dark:text-gray-300">{r.processed_by || '—'}</span>}</Cell></Column>
+              <Column width={130}><Table.HeaderCell>Created</Table.HeaderCell><Cell>{(r: any) => formatDate(r.created_at)}</Cell></Column>
             </Table>
           )}
         </div>
