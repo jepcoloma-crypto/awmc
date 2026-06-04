@@ -6,11 +6,6 @@ const router = Router();
 
 router.get('/stats', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const today = `${y}-${m}-${day}`;
     const userId = req.user!.id;
     const role = req.user!.role;
     const isDoctor = role === 'Medical Practitioner';
@@ -28,9 +23,9 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res) => {
        FROM appointments a
        JOIN patients p ON a.patient_id = p.id
        JOIN doctors d ON a.doctor_id = d.id
-       WHERE a.appointment_date = $1${isDoctor && doctorId ? ' AND a.doctor_id = $2' : ''}
+       WHERE a.appointment_date = CURRENT_DATE${isDoctor && doctorId ? ' AND a.doctor_id = $1' : ''}
        ORDER BY a.appointment_time`,
-      isDoctor && doctorId ? [today, doctorId] : [today]
+      isDoctor && doctorId ? [doctorId] : []
     );
 
     const activePatients = await query("SELECT COUNT(*) FROM patients WHERE status = $1", ['Active']);
@@ -100,8 +95,8 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res) => {
       `SELECT COALESCE(SUM(p.amount),0) as total
        FROM payments p
        JOIN invoices i ON p.invoice_id = i.id
-       WHERE p.payment_date::date = $1${isDoctor && doctorId ? ' AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id AND pd.doctor_id = $2)' : ''}`,
-      isDoctor && doctorId ? [today, doctorId] : [today]
+       WHERE p.payment_date::date = CURRENT_DATE${isDoctor && doctorId ? ' AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id AND pd.doctor_id = $1)' : ''}`,
+      isDoctor && doctorId ? [doctorId] : []
     );
 
     const todayProfFee = await query(
@@ -109,8 +104,8 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res) => {
        FROM invoice_items ii
        JOIN invoices i ON ii.invoice_id = i.id
        WHERE ii.description LIKE 'Professional Fee%'
-         AND i.id IN (SELECT p.invoice_id FROM payments p WHERE p.payment_date::date = $1)${isDoctor && doctorId ? ' AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id AND pd.doctor_id = $2)' : ''}`,
-      isDoctor && doctorId ? [today, doctorId] : [today]
+         AND i.id IN (SELECT p.invoice_id FROM payments p WHERE p.payment_date::date = CURRENT_DATE)${isDoctor && doctorId ? ' AND EXISTS (SELECT 1 FROM patient_doctors pd WHERE pd.patient_id = i.patient_id AND pd.doctor_id = $1)' : ''}`,
+      isDoctor && doctorId ? [doctorId] : []
     );
 
     const unattached = await query(`
