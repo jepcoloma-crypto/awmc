@@ -102,6 +102,10 @@ export default function DashboardPage() {
   }
   if (!isCashier && !isFrontDesk) {
     statCards.push({
+      title: 'Total Collected', value: formatCurrency(stats.total_collected), icon: 'currency', variant: 'green',
+      detail: 'Lifetime total collected',
+    });
+    statCards.push({
       title: 'Total Invoiced', value: formatCurrency(stats.total_invoiced), icon: 'receipt', variant: 'amber',
       detail: 'Lifetime invoice total',
     });

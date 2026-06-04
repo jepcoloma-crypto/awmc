@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query } from '../db';
+import { query, transaction } from '../db';
 import bcrypt from 'bcryptjs';
 import { authMiddleware, requireRole, type AuthRequest } from '../middleware/auth';
 
@@ -98,27 +98,35 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
 router.post('/:id/payment', authMiddleware, async (req: AuthRequest, res) => {
   try {
     const { amount, payment_method, reference_number } = req.body;
-    const invoice = await query('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
-    if (invoice.rows.length === 0) {
-      res.status(404).json({ error: 'Not found' });
-      return;
-    }
 
-    const payment = await query(
-      'INSERT INTO payments (invoice_id, amount, payment_method, reference_number, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING *',
-      [req.params.id, amount, payment_method, reference_number || '', req.user!.id]
-    );
+    const result = await transaction(async (tx) => {
+      const invoice = await tx('SELECT * FROM invoices WHERE id = $1', [req.params.id]);
+      if (invoice.rows.length === 0) {
+        throw { status: 404, message: 'Not found' };
+      }
 
-    const newPaid = parseFloat(invoice.rows[0].paid_amount) + parseFloat(amount);
-    const newBalance = parseFloat(invoice.rows[0].total) - newPaid;
-    const newStatus = newBalance <= 0 ? 'Paid' : 'Partial';
+      const payment = await tx(
+        'INSERT INTO payments (invoice_id, amount, payment_method, reference_number, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING *',
+        [req.params.id, amount, payment_method, reference_number || '', req.user!.id]
+      );
 
-    await query('UPDATE invoices SET paid_amount=$1, balance=$2, status=$3 WHERE id=$4',
-      [newPaid, Math.max(0, newBalance), newStatus, req.params.id]);
+      const newPaid = parseFloat(invoice.rows[0].paid_amount) + parseFloat(amount);
+      const newBalance = parseFloat(invoice.rows[0].total) - newPaid;
+      const newStatus = newBalance <= 0 ? 'Paid' : 'Partial';
 
-    res.status(201).json(payment.rows[0]);
+      await tx('UPDATE invoices SET paid_amount=$1, balance=$2, status=$3 WHERE id=$4',
+        [newPaid, Math.max(0, newBalance), newStatus, req.params.id]);
+
+      return payment.rows[0];
+    });
+
+    res.status(201).json(result);
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    if (err.status === 404) {
+      res.status(404).json({ error: err.message });
+    } else {
+      res.status(500).json({ error: err.message });
+    }
   }
 });
 
@@ -155,28 +163,29 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
     const invoice = invoiceRes.rows[0];
     const paidAmount = parseFloat(invoice.paid_amount);
 
-    // Delete existing items and re-insert
-    await query('DELETE FROM invoice_items WHERE invoice_id = $1', [req.params.id]);
+    await transaction(async (tx) => {
+      await tx('DELETE FROM invoice_items WHERE invoice_id = $1', [req.params.id]);
 
-    for (const item of items) {
-      await query(
-        'INSERT INTO invoice_items (invoice_id, service_id, description, quantity, unit_price, total) VALUES ($1,$2,$3,$4,$5,$6)',
-        [req.params.id, item.service_id || null, item.description, item.quantity, item.unit_price, item.total]
+      for (const item of items) {
+        await tx(
+          'INSERT INTO invoice_items (invoice_id, service_id, description, quantity, unit_price, total) VALUES ($1,$2,$3,$4,$5,$6)',
+          [req.params.id, item.service_id || null, item.description, item.quantity, item.unit_price, item.total]
+        );
+      }
+
+      const subtotal = items.reduce((s: number, i: any) => s + parseFloat(i.total), 0);
+      const tax = subtotal * 0.1;
+      const total = subtotal + tax;
+      const balance = Math.max(0, total - paidAmount);
+      let status = 'Unpaid';
+      if (balance <= 0) status = 'Paid';
+      else if (paidAmount > 0) status = 'Partial';
+
+      await tx(
+        'UPDATE invoices SET subtotal=$1, tax=$2, total=$3, balance=$4, status=$5 WHERE id=$6',
+        [subtotal, tax, total, balance, status, req.params.id]
       );
-    }
-
-    const subtotal = items.reduce((s: number, i: any) => s + parseFloat(i.total), 0);
-    const tax = subtotal * 0.1;
-    const total = subtotal + tax;
-    const balance = Math.max(0, total - paidAmount);
-    let status = 'Unpaid';
-    if (balance <= 0) status = 'Paid';
-    else if (paidAmount > 0) status = 'Partial';
-
-    await query(
-      'UPDATE invoices SET subtotal=$1, tax=$2, total=$3, balance=$4, status=$5 WHERE id=$6',
-      [subtotal, tax, total, balance, status, req.params.id]
-    );
+    });
 
     const updated = await query(
       'SELECT i.*, CONCAT(p.first_name, \' \', p.last_name) as patient_name FROM invoices i JOIN patients p ON i.patient_id = p.id WHERE i.id = $1',

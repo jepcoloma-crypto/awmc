@@ -125,6 +125,7 @@ router.get('/stats', authMiddleware, async (req: AuthRequest, res) => {
       total_collected_today: parseFloat(todayCollected.rows[0].total) || 0,
       prof_fee_collected_today: parseFloat(todayProfFee.rows[0].total) || 0,
       total_outstanding: parseFloat(invoices.rows[0].total_outstanding) || 0,
+      total_collected: parseFloat(invoices.rows[0].total_collected) || 0,
       total_invoiced: parseFloat(invoices.rows[0].total_invoiced) || 0,
       monthly_revenue: monthlyRevenue.rows.map((r: any) => ({ month: r.month, revenue: parseFloat(r.revenue) })),
       daily_revenue: dailyRevenue.rows.map((r: any) => ({ day: r.day, revenue: parseFloat(r.revenue) })),

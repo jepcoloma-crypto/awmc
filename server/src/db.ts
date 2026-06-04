@@ -16,6 +16,25 @@ export const pool = new Pool({
   idleTimeoutMillis: 30000,
 });
 
+export async function transaction<T>(fn: (txQuery: typeof query) => Promise<T>): Promise<T> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const txQuery: typeof query = async (text: string, params?: any[]) => {
+      const result = await client.query(text, params);
+      return result;
+    };
+    const result = await fn(txQuery);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 pool.on('error', (err) => {
   console.error('Unexpected pool error:', err);
 });
