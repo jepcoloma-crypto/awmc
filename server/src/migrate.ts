@@ -76,6 +76,29 @@ async function migrate() {
     console.error(`✗ ${err.message}`);
   }
 
+  // Ensure medical_certificates table exists (schema is in migrate.sql)
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS medical_certificates (
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+        doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
+        appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL,
+        diagnosis TEXT NOT NULL,
+        rest_from DATE,
+        rest_to DATE,
+        restrictions TEXT,
+        notes TEXT,
+        issued_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('✓ Medical certificates table ready');
+  } catch (err: any) {
+    console.error(`✗ ${err.message}`);
+  }
+
   await client.end();
   console.log('\n✓ Migration complete!');
 }

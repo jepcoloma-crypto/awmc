@@ -228,3 +228,18 @@ INSERT INTO doctors (first_name, last_name, specialization, phone, email, status
   ('Elena', 'Cruz', 'Cardiology', '09173456789', 'elena.cruz@clinic.com', 'Active'),
   ('Roberto', 'Tan', 'Dermatology', '09174567890', 'roberto.tan@clinic.com', 'Inactive')
 ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS medical_certificates (
+  id SERIAL PRIMARY KEY,
+  patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
+  appointment_id INTEGER REFERENCES appointments(id) ON DELETE SET NULL,
+  diagnosis TEXT NOT NULL,
+  rest_from DATE,
+  rest_to DATE,
+  restrictions TEXT,
+  notes TEXT,
+  issued_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

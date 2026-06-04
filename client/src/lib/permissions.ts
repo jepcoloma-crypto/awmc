@@ -11,6 +11,7 @@ const modulePermissions: Record<string, UserRole[]> = {
   settings: ['Administrator'],
   setup: ['Administrator'],
   reminders: ['Administrator', 'Medical Practitioner', 'Front Desk Staff', 'Cashier'],
+  certificates: ['Administrator', 'Medical Practitioner', 'Front Desk Staff'],
 };
 
 export function canAccess(module: string, user: User | null): boolean {
@@ -29,6 +30,7 @@ export const navItems = [
   { label: 'Reports', path: '/reports', icon: 'chart', module: 'reports' },
   { label: 'Users', path: '/users', icon: 'user', module: 'users' },
   { label: 'Reminders', path: '/reminders', icon: 'bell', module: 'reminders' },
+  { label: 'Certificates', path: '/certificates', icon: 'certificate', module: 'certificates' },
   { label: 'Setup', path: '/setup', icon: 'setup', module: 'setup' },
   { label: 'Settings', path: '/settings', icon: 'gear', module: 'settings' },
 ];

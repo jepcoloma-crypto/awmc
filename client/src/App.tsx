@@ -26,6 +26,8 @@ const ReportsPage = lazy(() => import('@/modules/reports/ReportsPage'));
 const SettingsPage = lazy(() => import('@/modules/settings/SettingsPage'));
 const RemindersPage = lazy(() => import('@/modules/reminders/RemindersPage'));
 const SetupPage = lazy(() => import('@/modules/setup/SetupPage'));
+const CertificatesPage = lazy(() => import('@/modules/certificates/CertificatesPage'));
+const CertificateView = lazy(() => import('@/modules/certificates/CertificateView'));
 
 function PageLoader() {
   return (
@@ -64,6 +66,8 @@ export default function App() {
                   <Route path="/settings" element={<ProtectedRoute module="settings"><SettingsPage /></ProtectedRoute>} />
                   <Route path="/setup" element={<ProtectedRoute module="setup"><SetupPage /></ProtectedRoute>} />
                   <Route path="/reminders" element={<ProtectedRoute module="reminders"><RemindersPage /></ProtectedRoute>} />
+                  <Route path="/certificates" element={<ProtectedRoute module="certificates"><CertificatesPage /></ProtectedRoute>} />
+                  <Route path="/certificates/:id" element={<CertificateView />} />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
