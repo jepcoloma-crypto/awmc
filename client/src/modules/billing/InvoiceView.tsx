@@ -21,6 +21,8 @@ export default function InvoiceView() {
   // Edit items modal state
   const [showEdit, setShowEdit] = useState(false);
   const [editItems, setEditItems] = useState<any[]>([]);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const [services, setServices] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<number | null>(null);
   const [showDoctorFeeModal, setShowDoctorFeeModal] = useState(false);
@@ -61,6 +63,8 @@ export default function InvoiceView() {
 
   const openEdit = () => {
     setEditItems(JSON.parse(JSON.stringify(invoice?.items || [])));
+    setAdminPassword('');
+    setPasswordError('');
     setShowEdit(true);
     if (invoice?.patient_id) {
       apiClient.get(`/patients/${invoice.patient_id}`).then((res) => {
@@ -118,13 +122,18 @@ export default function InvoiceView() {
 
   const handleSaveItems = async () => {
     setSaving(true);
+    setPasswordError('');
     try {
-      await apiClient.put(`/billing/${id}`, { items: editItems });
+      await apiClient.put(`/billing/${id}`, { items: editItems, password: adminPassword });
       toaster.push(<Notification type="success" header="Success">Invoice items updated</Notification>, { placement: 'topEnd' });
       setShowEdit(false);
       loadInvoice();
-    } catch {
-      toaster.push(<Notification type="error" header="Error">Failed to update invoice</Notification>, { placement: 'topEnd' });
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        setPasswordError(err?.response?.data?.error || 'Invalid admin password');
+      } else {
+        toaster.push(<Notification type="error" header="Error">Failed to update invoice</Notification>, { placement: 'topEnd' });
+      }
     } finally {
       setSaving(false);
     }
@@ -596,6 +605,13 @@ export default function InvoiceView() {
             <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
               <span className="text-base font-semibold text-gray-800 dark:text-gray-200">Total</span>
               <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(editSubtotal * 1.1)}</span>
+            </div>
+
+            {/* Admin password confirmation */}
+            <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Admin Password</label>
+              <Input type="password" value={adminPassword} onChange={(v) => { setAdminPassword(v); setPasswordError(''); }} placeholder="Enter your password to confirm changes" />
+              {passwordError && <p className="text-sm text-red-600 dark:text-red-400 mt-1">{passwordError}</p>}
             </div>
           </div>
         </Modal.Body>

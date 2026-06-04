@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query } from '../db';
+import bcrypt from 'bcryptjs';
 import { authMiddleware, requireRole, type AuthRequest } from '../middleware/auth';
 
 const router = Router();
@@ -121,11 +122,27 @@ router.post('/:id/payment', authMiddleware, async (req: AuthRequest, res) => {
   }
 });
 
-router.put('/:id', authMiddleware, async (req, res) => {
+router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
   try {
-    const { items } = req.body;
+    const { items, password } = req.body;
     if (!items || !Array.isArray(items)) {
       res.status(400).json({ error: 'Items array is required' });
+      return;
+    }
+
+    // Verify admin password
+    if (!password) {
+      res.status(403).json({ error: 'Admin password is required' });
+      return;
+    }
+    const userRes = await query('SELECT password_hash FROM users WHERE id = $1', [req.user!.id]);
+    if (userRes.rows.length === 0) {
+      res.status(403).json({ error: 'User not found' });
+      return;
+    }
+    const valid = await bcrypt.compare(password, userRes.rows[0].password_hash);
+    if (!valid) {
+      res.status(403).json({ error: 'Invalid admin password' });
       return;
     }
 
