@@ -30,6 +30,9 @@ async function migrate() {
   const users = [
     { username: 'admin', first_name: 'System', last_name: 'Admin', email: 'admin@clinic.com', role: 'Administrator' },
     { username: 'doctor1', first_name: 'Maria', last_name: 'Santos', email: 'maria.santos@clinic.com', role: 'Medical Practitioner' },
+    { username: 'doctor2', first_name: 'Carlos', last_name: 'Lopez', email: 'carlos.lopez@clinic.com', role: 'Medical Practitioner' },
+    { username: 'doctor3', first_name: 'Elena', last_name: 'Cruz', email: 'elena.cruz@clinic.com', role: 'Medical Practitioner' },
+    { username: 'doctor4', first_name: 'Roberto', last_name: 'Tan', email: 'roberto.tan@clinic.com', role: 'Medical Practitioner' },
     { username: 'receptionist', first_name: 'Juan', last_name: 'Dela Cruz', email: 'juan.delacruz@clinic.com', role: 'Front Desk Staff' },
     { username: 'cashier', first_name: 'Ana', last_name: 'Reyes', email: 'ana.reyes@clinic.com', role: 'Cashier' },
   ];
@@ -46,12 +49,32 @@ async function migrate() {
     }
   }
 
-  // Link doctor1 user to doctor record
-  try {
-    const res = await client.query(`UPDATE users SET doctor_id = 1 WHERE username = 'doctor1'`);
-    if (res.rowCount && res.rowCount > 0) console.log('✓ Linked doctor1 user to doctor record');
-  } catch (err: any) {
-    console.error(`✗ ${err.message}`);
+  // Link medical practitioner users to their doctor records by name
+  const doctorUsers = [
+    { username: 'doctor1', first_name: 'Maria', last_name: 'Santos' },
+    { username: 'doctor2', first_name: 'Carlos', last_name: 'Lopez' },
+    { username: 'doctor3', first_name: 'Elena', last_name: 'Cruz' },
+    { username: 'doctor4', first_name: 'Roberto', last_name: 'Tan' },
+  ];
+  for (const du of doctorUsers) {
+    try {
+      const docRes = await client.query(
+        `SELECT id FROM doctors WHERE first_name ILIKE $1 AND last_name ILIKE $2 LIMIT 1`,
+        [du.first_name, du.last_name]
+      );
+      if (docRes.rows.length > 0) {
+        const doctorId = docRes.rows[0].id;
+        await client.query(
+          `UPDATE users SET doctor_id = $1 WHERE username = $2 AND (doctor_id IS NULL OR doctor_id <> $1)`,
+          [doctorId, du.username]
+        );
+        console.log(`✓ Linked user '${du.username}' → doctor id=${doctorId} (${du.first_name} ${du.last_name})`);
+      } else {
+        console.log(`⚠ No doctor record found for ${du.first_name} ${du.last_name}, skipping link`);
+      }
+    } catch (err: any) {
+      console.error(`✗ Failed to link user '${du.username}': ${err.message}`);
+    }
   }
 
   // Migrate existing doctor_id from patients to patient_doctors
