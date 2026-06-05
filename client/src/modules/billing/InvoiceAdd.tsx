@@ -21,6 +21,7 @@ export default function InvoiceAdd() {
   const toaster = useToaster();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
   const [procedureTypes, setProcedureTypes] = useState<ProcedureType[]>([]);
   const [patientId, setPatientId] = useState<number | null>(null);
   const [dueDate, setDueDate] = useState('');
@@ -42,10 +43,12 @@ export default function InvoiceAdd() {
       apiClient.get('/patients'),
       apiClient.get('/services'),
       apiClient.get('/procedure-types'),
-    ]).then(([pRes, sRes, ptRes]) => {
+      apiClient.get('/inventory'),
+    ]).then(([pRes, sRes, ptRes, iRes]) => {
       setPatients(pRes.data.data);
       setServices(sRes.data.data);
       setProcedureTypes(ptRes.data.data);
+      setInventory(iRes.data.data);
     });
   }, []);
 
@@ -108,6 +111,13 @@ export default function InvoiceAdd() {
     setItems([...items, { service_id: svc.id, description: svc.name, quantity: 1, unit_price: price, total: price }]);
   };
 
+  const addInventoryItem = (invId: number) => {
+    const inv = inventory.find((i: any) => i.id === invId);
+    if (!inv) return;
+    const price = Number(inv.unit_price);
+    setItems((prev) => [...prev, { description: inv.item_name, quantity: 1, unit_price: price, total: price }]);
+  };
+
   const addProcedure = (procId: number) => {
     const proc = patientProcedures.find((p) => p.id === procId);
     if (!proc) return;
@@ -119,7 +129,7 @@ export default function InvoiceAdd() {
     if (!name) return;
     const qty = Number(medicineForm.quantity) || 1;
     const price = Number(medicineForm.price) || 0;
-    setItems((prev) => [...prev, { description: `Medicine: ${name}`, quantity: qty, unit_price: price, total: qty * price }]);
+    setItems((prev) => [...prev, { description: name, quantity: qty, unit_price: price, total: qty * price }]);
     setShowMedicine(false);
     setMedicineForm({ name: '', quantity: 1, price: 0 });
   };
@@ -214,6 +224,12 @@ export default function InvoiceAdd() {
               <Button appearance="primary" size="sm" disabled={!patientId} onClick={() => setShowNewProc(true)}>New</Button>
               <Button appearance="ghost" size="sm" disabled={!patientId || patientDoctors.length === 0} onClick={() => setShowDocFee(true)}>Doc's Fee</Button>
               <Button appearance="ghost" size="sm" disabled={!patientId} onClick={() => setShowMedicine(true)}>Medicine</Button>
+              <SelectPicker
+                data={inventory.filter((i: any) => i.quantity > 0).map((i: any) => ({ label: `${i.item_name} (${i.quantity} ${i.unit}) - ${formatCurrency(i.unit_price)}`, value: i.id }))}
+                placeholder="+ Add from Inventory"
+                onChange={(v) => { if (v) addInventoryItem(v); }}
+                className="w-60"
+              />
             </div>
           </div>
           <div className="table-responsive"><Table data={items} autoHeight rowHeight={48}>

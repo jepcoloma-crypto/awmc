@@ -22,6 +22,7 @@ export default function InvoiceView() {
   const [showEdit, setShowEdit] = useState(false);
   const [editItems, setEditItems] = useState<any[]>([]);
   const [services, setServices] = useState<any[]>([]);
+  const [inventory, setInventory] = useState<any[]>([]);
   const [selectedService, setSelectedService] = useState<number | null>(null);
   const [showDoctorFeeModal, setShowDoctorFeeModal] = useState(false);
   const [doctorFeeForm, setDoctorFeeForm] = useState({ doctorId: '', doctorName: '', amount: 0 });
@@ -39,6 +40,7 @@ export default function InvoiceView() {
     loadInvoice();
     apiClient.get('/settings').then((res) => setSettings(res.data)).catch(() => {});
     apiClient.get('/services').then((res) => setServices(res.data.data || res.data)).catch(() => {});
+    apiClient.get('/inventory').then((res) => setInventory(res.data.data || [])).catch(() => {});
   }, [id]);
 
   const loadInvoice = async () => {
@@ -108,13 +110,20 @@ export default function InvoiceView() {
     const total = medicineForm.quantity * medicineForm.unitPrice;
     setEditItems([...editItems, {
       service_id: null,
-      description: `Medicine: ${medicineForm.name}`,
+      description: medicineForm.name,
       quantity: medicineForm.quantity,
       unit_price: medicineForm.unitPrice,
       total
     }]);
     setShowMedicineModal(false);
     setMedicineForm({ name: '', quantity: 1, unitPrice: 0 });
+  };
+
+  const handleAddInventory = (invId: number) => {
+    const inv = inventory.find((i: any) => i.id === invId);
+    if (!inv) return;
+    const price = Number(inv.unit_price);
+    setEditItems((prev: any[]) => [...prev, { description: inv.item_name, quantity: 1, unit_price: price, total: price }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -570,7 +579,14 @@ export default function InvoiceView() {
               <Button appearance="ghost" size="sm" onClick={() => setShowMedicineModal(true)}>
                 + Medicine
               </Button>
-            </div>
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+              <SelectPicker
+                data={inventory.filter((i: any) => i.quantity > 0).map((i: any) => ({ label: `${i.item_name} (${i.quantity} ${i.unit}) - ${formatCurrency(i.unit_price)}`, value: i.id }))}
+                placeholder="+ Add from Inventory"
+                onChange={(v) => { if (v) handleAddInventory(v); }}
+                style={{ minWidth: 220 }}
+                searchable
+              />
 
             {/* Items list */}
             {editItems.length === 0 ? (
