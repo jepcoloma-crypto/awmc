@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
 import { Table, Tag, Button, IconButton, Input, SelectPicker, Modal, Notification, useToaster } from 'rsuite';
 import { EyeRound, Trash } from '@rsuite/icons';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, exportCSV } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 import { canAccess } from '@/lib/permissions';
 import type { Invoice } from '@/types';
@@ -63,9 +63,14 @@ export default function BillingList() {
           <h2 className="text-xl font-bold text-gray-900 dark:text-gray-50 tracking-tight">Billing & Invoices</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300 mt-0.5">Manage patient invoices and payments</p>
         </div>
-        {canAccess('billing', user) && (
-          <Button appearance="primary" onClick={() => navigate('/billing/add')}>+ New Invoice</Button>
-        )}
+        <div className="flex gap-2">
+          <Button appearance="ghost" onClick={() => {
+            exportCSV('invoices', ['Invoice#', 'Patient', 'Total', 'Paid', 'Balance', 'Status', 'Date'], invoices.map((r) => [r.invoice_number, r.patient_name, r.total, r.paid_amount, r.balance, r.status, r.invoice_date]));
+          }}>Export CSV</Button>
+          {canAccess('billing', user) && (
+            <Button appearance="primary" onClick={() => navigate('/billing/add')}>+ New Invoice</Button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

@@ -52,6 +52,24 @@ export function generateId(): string {
   return `PT-${timestamp}${random}`;
 }
 
+export function exportCSV(filename: string, headers: string[], rows: (string | number | null | undefined)[][]): void {
+  const csvContent = [
+    headers.join(','),
+    ...rows.map((row) => row.map((cell) => {
+      const val = cell ?? '';
+      return /[,"\n]/.test(String(val)) ? `"${String(val).replace(/"/g, '""')}"` : val;
+    }).join(',')),
+  ].join('\n');
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function cn(...classes: (string | boolean | undefined | null)[]): string {
   return classes.filter(Boolean).join(' ');
 }

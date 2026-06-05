@@ -48,8 +48,9 @@ export default function AppointmentAdd() {
       await apiClient.post('/appointments', form);
       toaster.push(<Notification type="success" header="Success">Appointment created</Notification>, { placement: 'topEnd' });
       navigate('/appointments');
-    } catch {
-      toaster.push(<Notification type="error" header="Error">Failed to create appointment</Notification>, { placement: 'topEnd' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Failed to create appointment';
+      toaster.push(<Notification type="error" header="Error">{msg}</Notification>, { placement: 'topEnd' });
     } finally {
       setSaving(false);
     }

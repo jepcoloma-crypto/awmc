@@ -12,6 +12,7 @@ const modulePermissions: Record<string, UserRole[]> = {
   setup: ['Administrator'],
   reminders: ['Administrator', 'Medical Practitioner', 'Front Desk Staff', 'Cashier'],
   certificates: ['Administrator', 'Medical Practitioner', 'Front Desk Staff'],
+  inventory: ['Administrator', 'Medical Practitioner', 'Front Desk Staff', 'Cashier'],
 };
 
 export function canAccess(module: string, user: User | null): boolean {

@@ -32,6 +32,9 @@ export default function PatientView() {
           <Link to={`/patients/${id}/edit`}>
             <Button appearance="primary">Edit</Button>
           </Link>
+          <Link to={`/patients/${id}/history`}>
+            <Button appearance="ghost">History</Button>
+          </Link>
           <Link to={`/certificates?patient=${id}`}>
             <Button appearance="ghost">Medical Certificate</Button>
           </Link>

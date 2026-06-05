@@ -17,6 +17,7 @@ import reportRoutes from './routes/reports';
 import settingRoutes from './routes/settings';
 import reminderRoutes from './routes/reminders';
 import certificateRoutes from './routes/certificates';
+import inventoryRoutes from './routes/inventory';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -45,6 +46,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/certificates', certificateRoutes);
+app.use('/api/inventory', inventoryRoutes);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

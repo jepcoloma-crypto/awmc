@@ -39,6 +39,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { label: 'Users', path: '/users', icon: 'users', module: 'users' },
     { label: 'Reminders', path: '/reminders', icon: 'reminders', module: 'reminders' },
     { label: 'Certificates', path: '/certificates', icon: 'certificate', module: 'certificates' },
+    { label: 'Inventory', path: '/inventory', icon: 'setup', module: 'inventory' },
     { label: 'Setup', path: '/setup', icon: 'setup', module: 'setup' },
     { label: 'Settings', path: '/settings', icon: 'settings', module: 'settings' },
   ];

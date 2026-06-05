@@ -8,6 +8,7 @@ import type { Appointment, Patient, Doctor } from '@/types';
 const statusOptions = [
   { label: 'Scheduled', value: 'Scheduled' },
   { label: 'Confirmed', value: 'Confirmed' },
+  { label: 'Arrived', value: 'Arrived' },
   { label: 'In Progress', value: 'In Progress' },
   { label: 'Completed', value: 'Completed' },
   { label: 'Cancelled', value: 'Cancelled' },
@@ -45,8 +46,9 @@ export default function AppointmentEdit() {
       await apiClient.put(`/appointments/${id}`, form);
       toaster.push(<Notification type="success" header="Success">Appointment updated</Notification>, { placement: 'topEnd' });
       navigate('/appointments');
-    } catch {
-      toaster.push(<Notification type="error" header="Error">Failed to update</Notification>, { placement: 'topEnd' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Failed to update';
+      toaster.push(<Notification type="error" header="Error">{msg}</Notification>, { placement: 'topEnd' });
     } finally {
       setSaving(false);
     }

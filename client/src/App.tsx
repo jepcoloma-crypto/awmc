@@ -28,6 +28,8 @@ const RemindersPage = lazy(() => import('@/modules/reminders/RemindersPage'));
 const SetupPage = lazy(() => import('@/modules/setup/SetupPage'));
 const CertificatesPage = lazy(() => import('@/modules/certificates/CertificatesPage'));
 const CertificateView = lazy(() => import('@/modules/certificates/CertificateView'));
+const PatientTimeline = lazy(() => import('@/modules/patient/PatientTimeline'));
+const InventoryPage = lazy(() => import('@/modules/inventory/InventoryPage'));
 
 function PageLoader() {
   return (
@@ -52,6 +54,7 @@ export default function App() {
                   <Route path="/patients/add" element={<ProtectedRoute module="patients"><PatientAdd /></ProtectedRoute>} />
                   <Route path="/patients/:id" element={<ProtectedRoute module="patients"><PatientView /></ProtectedRoute>} />
                   <Route path="/patients/:id/edit" element={<ProtectedRoute module="patients"><PatientEdit /></ProtectedRoute>} />
+                  <Route path="/patients/:id/history" element={<ProtectedRoute module="patients"><PatientTimeline /></ProtectedRoute>} />
                   <Route path="/appointments" element={<ProtectedRoute module="appointments"><AppointmentsPage /></ProtectedRoute>} />
                   <Route path="/appointments/add" element={<ProtectedRoute module="appointments"><AppointmentAdd /></ProtectedRoute>} />
                   <Route path="/appointments/:id/edit" element={<ProtectedRoute module="appointments"><AppointmentEdit /></ProtectedRoute>} />
@@ -68,6 +71,7 @@ export default function App() {
                   <Route path="/reminders" element={<ProtectedRoute module="reminders"><RemindersPage /></ProtectedRoute>} />
                   <Route path="/certificates" element={<ProtectedRoute module="certificates"><CertificatesPage /></ProtectedRoute>} />
                   <Route path="/certificates/:id" element={<CertificateView />} />
+                  <Route path="/inventory" element={<ProtectedRoute module="inventory"><InventoryPage /></ProtectedRoute>} />
                 </Route>
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>

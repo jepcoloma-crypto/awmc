@@ -1,6 +1,6 @@
 export type UserRole = 'Administrator' | 'Medical Practitioner' | 'Front Desk Staff' | 'Cashier';
 
-export type AppointmentStatus = 'Scheduled' | 'Confirmed' | 'In Progress' | 'Completed' | 'Cancelled' | 'No Show';
+export type AppointmentStatus = 'Scheduled' | 'Confirmed' | 'Arrived' | 'In Progress' | 'Completed' | 'Cancelled' | 'No Show';
 
 export type PaymentStatus = 'Paid' | 'Partial' | 'Unpaid' | 'Overdue';
 
@@ -59,13 +59,14 @@ export interface Patient {
 export interface Appointment {
   id: number;
   patient_id: number;
-  doctor_id: number;
+  doctor_id: number | null;
   appointment_date: string;
   appointment_time: string;
   end_time: string;
   status: AppointmentStatus;
   reason: string;
   notes: string;
+  cancellation_reason?: string;
   created_at: string;
   updated_at: string;
   patient_name?: string;

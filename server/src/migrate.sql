@@ -111,6 +111,7 @@ CREATE TABLE IF NOT EXISTS appointments (
   status VARCHAR(30) DEFAULT 'Scheduled',
   reason TEXT,
   notes TEXT,
+  cancellation_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -242,4 +243,18 @@ CREATE TABLE IF NOT EXISTS medical_certificates (
   issued_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS inventory (
+  id SERIAL PRIMARY KEY,
+  item_name VARCHAR(200) NOT NULL,
+  category VARCHAR(100) DEFAULT 'Medicine',
+  quantity INTEGER NOT NULL DEFAULT 0,
+  unit VARCHAR(50) DEFAULT 'piece',
+  reorder_level INTEGER NOT NULL DEFAULT 10,
+  unit_price DECIMAL(12,2) DEFAULT 0,
+  supplier VARCHAR(200),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );

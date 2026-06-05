@@ -247,4 +247,55 @@ router.delete('/:id/procedures/:procId', authMiddleware, async (req, res) => {
   }
 });
 
+// Patient timeline — aggregated appointments, invoices, payments, certificates
+router.get('/:id/timeline', authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [appts, invs, certs] = await Promise.all([
+      query(
+        `SELECT id, appointment_date as date, appointment_time as time, status, reason, notes,
+          CONCAT('Dr. ', d.first_name, ' ', d.last_name) as doctor_name
+         FROM appointments a LEFT JOIN doctors d ON d.id = a.doctor_id
+         WHERE a.patient_id = $1 ORDER BY a.appointment_date DESC, a.appointment_time DESC`,
+        [id]
+      ),
+      query(
+        `SELECT i.id, i.invoice_date as date, i.total, i.paid_amount, i.balance, i.status,
+          (SELECT COALESCE(json_agg(json_build_object('description', ii.description, 'total', ii.total)), '[]'::json)
+           FROM invoice_items ii WHERE ii.invoice_id = i.id) as items
+         FROM invoices i WHERE i.patient_id = $1 ORDER BY i.invoice_date DESC`,
+        [id]
+      ),
+      query(
+        `SELECT c.id, c.issued_at as date, c.diagnosis, c.rest_from, c.rest_to, c.restrictions,
+          CONCAT(u.first_name, ' ', u.last_name) as issued_by_name
+         FROM medical_certificates c LEFT JOIN users u ON u.id = c.issued_by
+         WHERE c.patient_id = $1 ORDER BY c.issued_at DESC`,
+        [id]
+      ),
+    ]);
+
+    // Also get payments separately for better detail
+    const pays = await query(
+      `SELECT p.id, p.payment_date as date, p.amount, p.payment_method, p.reference_number, i.invoice_number
+       FROM payments p JOIN invoices i ON i.id = p.invoice_id
+       WHERE i.patient_id = $1 ORDER BY p.payment_date DESC`,
+      [id]
+    );
+
+    const timeline: any[] = [];
+
+    appts.rows.forEach((r: any) => timeline.push({ type: 'appointment', date: r.date, data: r }));
+    invs.rows.forEach((r: any) => timeline.push({ type: 'invoice', date: r.date, data: r }));
+    pays.rows.forEach((r: any) => timeline.push({ type: 'payment', date: r.date, data: r }));
+    certs.rows.forEach((r: any) => timeline.push({ type: 'certificate', date: r.date, data: r }));
+
+    timeline.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    res.json({ timeline });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;

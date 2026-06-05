@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, SelectPicker, IconButton, Modal, Notification, useToaster, Tooltip, Whisper } from 'rsuite';
+import { Table, Tag, Button, SelectPicker, IconButton, Modal, Notification, useToaster, Tooltip, Whisper, Input, Textarea } from 'rsuite';
 import { EyeRound, EditRound, Trash } from '@rsuite/icons';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -10,12 +10,14 @@ import interactionPlugin from '@fullcalendar/interaction';
 import type { EventClickArg } from '@fullcalendar/core';
 import type { Appointment } from '@/types';
 import { formatDateDDMMYYYY, formatTimeHHMM } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { Column, Cell } = Table;
 
 const statusColors: Record<string, string> = {
   Scheduled: '#0d6efd',
   Confirmed: '#0dcaf0',
+  Arrived: '#6f42c1',
   'In Progress': '#ffc107',
   Completed: '#198754',
   Cancelled: '#dc3545',
@@ -24,6 +26,7 @@ const statusColors: Record<string, string> = {
 
 export default function AppointmentsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const toaster = useToaster();
   const calendarRef = useRef<FullCalendar>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -31,7 +34,9 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [viewModal, setViewModal] = useState<Appointment | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Appointment | null>(null);
-  const [stats, setStats] = useState({ scheduled: 0, confirmed: 0, completed: 0, cancelled: 0, noShow: 0 });
+  const [cancelTarget, setCancelTarget] = useState<Appointment | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [stats, setStats] = useState({ scheduled: 0, confirmed: 0, arrived: 0, inProgress: 0, completed: 0, cancelled: 0, noShow: 0 });
 
   useEffect(() => { loadAppointments(); }, []);
 
@@ -40,9 +45,12 @@ export default function AppointmentsPage() {
       const res = await apiClient.get('/appointments');
       const data = res.data.data;
       setAppointments(data);
-      const s = { scheduled: 0, confirmed: 0, completed: 0, cancelled: 0, noShow: 0 };
+      const s = { scheduled: 0, confirmed: 0, arrived: 0, inProgress: 0, completed: 0, cancelled: 0, noShow: 0 };
       data.forEach((a: Appointment) => {
-        const map: Record<string, keyof typeof s> = { Scheduled: 'scheduled', Confirmed: 'confirmed', Completed: 'completed', Cancelled: 'cancelled', 'No Show': 'noShow', 'In Progress': 'confirmed' };
+        const map: Record<string, keyof typeof s> = {
+          Scheduled: 'scheduled', Confirmed: 'confirmed', Arrived: 'arrived',
+          'In Progress': 'inProgress', Completed: 'completed', Cancelled: 'cancelled', 'No Show': 'noShow'
+        };
         const k = map[a.status];
         if (k) s[k]++;
       });
@@ -84,12 +92,41 @@ export default function AppointmentsPage() {
     }
   };
 
+  const transitionStatus = async (id: number, status: string) => {
+    try {
+      await apiClient.patch(`/appointments/${id}/status`, { status });
+      toaster.push(<Notification type="success" header="Updated">Status changed to {status}</Notification>, { placement: 'topEnd' });
+      loadAppointments();
+    } catch {
+      toaster.push(<Notification type="error" header="Error">Failed to update status</Notification>, { placement: 'topEnd' });
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!cancelTarget || !cancelReason) return;
+    try {
+      await apiClient.patch(`/appointments/${cancelTarget.id}/status`, { status: 'Cancelled', cancellation_reason: cancelReason });
+      toaster.push(<Notification type="success" header="Cancelled">Appointment cancelled</Notification>, { placement: 'topEnd' });
+      setCancelTarget(null);
+      setCancelReason('');
+      loadAppointments();
+    } catch {
+      toaster.push(<Notification type="error" header="Error">Failed to cancel</Notification>, { placement: 'topEnd' });
+    }
+  };
+
+  const isFrontDesk = user?.role === 'Front Desk Staff';
+  const isPractitioner = user?.role === 'Medical Practitioner';
+  const isAdmin = user?.role === 'Administrator';
+  const canCheckIn = isFrontDesk || isAdmin;
+  const canProgress = isPractitioner || isAdmin;
+
   const statCards = [
     { label: 'Scheduled', count: stats.scheduled, color: 'blue' },
-    { label: 'Confirmed', count: stats.confirmed, color: 'teal' },
+    { label: 'Arrived', count: stats.arrived, color: 'purple' },
+    { label: 'In Progress', count: stats.inProgress, color: 'orange' },
     { label: 'Completed', count: stats.completed, color: 'green' },
     { label: 'Cancelled', count: stats.cancelled, color: 'rose' },
-    { label: 'No Show', count: stats.noShow, color: 'purple' },
   ];
 
   return (
@@ -140,6 +177,7 @@ export default function AppointmentsPage() {
               { label: 'All Status', value: '' },
               { label: 'Scheduled', value: 'Scheduled' },
               { label: 'Confirmed', value: 'Confirmed' },
+              { label: 'Arrived', value: 'Arrived' },
               { label: 'In Progress', value: 'In Progress' },
               { label: 'Completed', value: 'Completed' },
               { label: 'Cancelled', value: 'Cancelled' },
@@ -154,24 +192,53 @@ export default function AppointmentsPage() {
         <Table data={appointments} loading={loading} autoHeight rowHeight={52}>
           <Column width={100}><Table.HeaderCell>Date</Table.HeaderCell><Cell>{(r: Appointment) => formatDateDDMMYYYY(r.appointment_date)}</Cell></Column>
           <Column width={80}><Table.HeaderCell>Time</Table.HeaderCell><Cell>{(r: Appointment) => formatTimeHHMM(r.appointment_time)}</Cell></Column>
-          <Column width={180}><Table.HeaderCell>Patient</Table.HeaderCell><Cell>{(r: Appointment) => <span className="font-medium">{r.patient_name}</span>}</Cell></Column>
-          <Column width={180}><Table.HeaderCell>Doctor</Table.HeaderCell><Cell>{(r: Appointment) => r.doctor_name}</Cell></Column>
-          <Column width={160} flexGrow={1}><Table.HeaderCell>Reason</Table.HeaderCell><Cell>{(r: Appointment) => r.reason}</Cell></Column>
-          <Column width={110}><Table.HeaderCell>Status</Table.HeaderCell><Cell>{(r: Appointment) => (
+          <Column width={170}><Table.HeaderCell>Patient</Table.HeaderCell><Cell>{(r: Appointment) => <span className="font-medium">{r.patient_name}</span>}</Cell></Column>
+          <Column width={170}><Table.HeaderCell>Doctor</Table.HeaderCell><Cell>{(r: Appointment) => r.doctor_name}</Cell></Column>
+          <Column width={150} flexGrow={1}><Table.HeaderCell>Reason</Table.HeaderCell><Cell>{(r: Appointment) => r.reason}</Cell></Column>
+          <Column width={100}><Table.HeaderCell>Status</Table.HeaderCell><Cell>{(r: Appointment) => (
             <Tag color={
               r.status === 'Completed' ? 'green' :
               r.status === 'Scheduled' ? 'blue' :
               r.status === 'Confirmed' ? 'cyan' :
+              r.status === 'Arrived' ? 'violet' :
               r.status === 'In Progress' ? 'orange' :
-              r.status === 'Cancelled' ? 'red' : 'violet'
+              r.status === 'No Show' ? 'yellow' : 'red'
             }>{r.status}</Tag>
           )}</Cell></Column>
-          <Column width={130}><Table.HeaderCell>Actions</Table.HeaderCell>
+          <Column width={200}><Table.HeaderCell>Actions</Table.HeaderCell>
             <Cell>{(r: Appointment) => (
               <div className="flex gap-1">
                 <Whisper speaker={<Tooltip>View Details</Tooltip>} placement="top" trigger="hover">
                   <IconButton size="sm" appearance="subtle" icon={<EyeRound style={{ color: '#0b6e4f' }} />} onClick={(e) => { e.stopPropagation(); setViewModal(r); }} />
                 </Whisper>
+                {(r.status === 'Scheduled' || r.status === 'Confirmed') && canCheckIn && (
+                  <Whisper speaker={<Tooltip>Check In (Arrived)</Tooltip>} placement="top" trigger="hover">
+                    <IconButton size="sm" appearance="subtle" icon={
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6f42c1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    } onClick={(e) => { e.stopPropagation(); transitionStatus(r.id, 'Arrived'); }} />
+                  </Whisper>
+                )}
+                {r.status === 'Arrived' && canProgress && (
+                  <Whisper speaker={<Tooltip>Start (In Progress)</Tooltip>} placement="top" trigger="hover">
+                    <IconButton size="sm" appearance="subtle" icon={
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ffc107" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    } onClick={(e) => { e.stopPropagation(); transitionStatus(r.id, 'In Progress'); }} />
+                  </Whisper>
+                )}
+                {r.status === 'In Progress' && canProgress && (
+                  <Whisper speaker={<Tooltip>Complete</Tooltip>} placement="top" trigger="hover">
+                    <IconButton size="sm" appearance="subtle" icon={
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#198754" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    } onClick={(e) => { e.stopPropagation(); transitionStatus(r.id, 'Completed'); }} />
+                  </Whisper>
+                )}
+                {(r.status === 'Scheduled' || r.status === 'Confirmed' || r.status === 'Arrived') && (
+                  <Whisper speaker={<Tooltip>Cancel</Tooltip>} placement="top" trigger="hover">
+                    <IconButton size="sm" appearance="subtle" icon={
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc3545" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    } onClick={(e) => { e.stopPropagation(); setCancelTarget(r); setCancelReason(''); }} />
+                  </Whisper>
+                )}
                 {r.status === 'Completed' && (
                   <Whisper speaker={<Tooltip>Medical Certificate</Tooltip>} placement="top" trigger="hover">
                     <IconButton size="sm" appearance="subtle" icon={
@@ -203,11 +270,26 @@ export default function AppointmentsPage() {
               <DetailRow label="Status" value={viewModal.status} />
               <DetailRow label="Reason" value={viewModal.reason} />
               {viewModal.notes && <DetailRow label="Notes" value={viewModal.notes} />}
+              {viewModal.cancellation_reason && <DetailRow label="Cancellation Reason" value={viewModal.cancellation_reason} />}
             </div>
           )}
         </Modal.Body>
         <Modal.Footer>
           <Button onClick={() => setViewModal(null)} appearance="primary">Close</Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal open={!!cancelTarget} onClose={() => setCancelTarget(null)} size="xs">
+        <Modal.Header><Modal.Title>Cancel Appointment</Modal.Title></Modal.Header>
+        <Modal.Body>
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+            Why are you cancelling the appointment for <strong>{cancelTarget?.patient_name}</strong>?
+          </p>
+          <Input as="textarea" rows={3} value={cancelReason} onChange={setCancelReason} placeholder="Enter cancellation reason..." />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button appearance="primary" color="red" onClick={handleCancel} disabled={!cancelReason}>Confirm Cancel</Button>
+          <Button appearance="default" onClick={() => setCancelTarget(null)}>Keep</Button>
         </Modal.Footer>
       </Modal>
 

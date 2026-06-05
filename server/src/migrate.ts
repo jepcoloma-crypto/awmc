@@ -109,6 +109,38 @@ async function migrate() {
     if (!err.message.includes('does not exist')) console.error(`✗ ${err.message}`);
   }
 
+  // Add cancellation_reason column to appointments
+  try {
+    await client.query(`
+      ALTER TABLE appointments ADD COLUMN IF NOT EXISTS cancellation_reason TEXT
+    `);
+    console.log('✓ Added cancellation_reason column to appointments');
+  } catch (err: any) {
+    if (!err.message.includes('does not exist')) console.error(`✗ ${err.message}`);
+  }
+
+  // Ensure inventory table exists
+  try {
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS inventory (
+        id SERIAL PRIMARY KEY,
+        item_name VARCHAR(200) NOT NULL,
+        category VARCHAR(100) DEFAULT 'Medicine',
+        quantity INTEGER NOT NULL DEFAULT 0,
+        unit VARCHAR(50) DEFAULT 'piece',
+        reorder_level INTEGER NOT NULL DEFAULT 10,
+        unit_price DECIMAL(12,2) DEFAULT 0,
+        supplier VARCHAR(200),
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('✓ Inventory table ready');
+  } catch (err: any) {
+    console.error(`✗ ${err.message}`);
+  }
+
   // Ensure medical_certificates table exists (schema is in migrate.sql)
   try {
     await client.query(`
