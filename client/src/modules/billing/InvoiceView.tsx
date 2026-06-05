@@ -587,6 +587,7 @@ export default function InvoiceView() {
                 style={{ minWidth: 220 }}
                 searchable
               />
+            </div>
 
             {/* Items list */}
             {editItems.length === 0 ? (
