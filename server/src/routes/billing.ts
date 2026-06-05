@@ -174,8 +174,8 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
       }
 
       const subtotal = items.reduce((s: number, i: any) => s + parseFloat(i.total), 0);
-      const tax = subtotal * 0.1;
-      const total = subtotal + tax;
+      const tax = 0;
+      const total = subtotal;
       const balance = Math.max(0, total - paidAmount);
       let status = 'Unpaid';
       if (balance <= 0) status = 'Paid';

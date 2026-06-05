@@ -145,8 +145,7 @@ export default function InvoiceAdd() {
   };
 
   const subtotal = items.reduce((s, i) => s + i.total, 0);
-  const tax = subtotal * 0.1;
-  const total = subtotal + tax;
+  const total = subtotal;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -162,7 +161,6 @@ export default function InvoiceAdd() {
         notes,
         items,
         subtotal,
-        tax,
         total,
       });
       toaster.push(<Notification type="success" header="Success">Invoice created</Notification>, { placement: 'topEnd' });
@@ -253,10 +251,6 @@ export default function InvoiceAdd() {
             <div className="flex justify-between w-64">
               <span className="text-gray-500 dark:text-gray-300">Subtotal:</span>
               <span className="font-medium">{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex justify-between w-64">
-              <span className="text-gray-500 dark:text-gray-300">Tax (10%):</span>
-              <span className="font-medium">{formatCurrency(tax)}</span>
             </div>
             <div className="flex justify-between w-64 text-lg font-bold text-gray-800 dark:text-gray-100">
               <span>Total:</span>

@@ -375,10 +375,6 @@ export default function InvoiceView() {
             <span style="font-weight:600">Subtotal</span>
             <span style="font-weight:600">${formatCurrency(subtotal)}</span>
           </div>
-          <div class="row">
-            <span>Tax (10%)</span>
-            <span>${formatCurrency(invoice.tax)}</span>
-          </div>
           <div class="row final">
             <span>Total</span>
             <span>${formatCurrency(invoice.total)}</span>
@@ -600,13 +596,9 @@ export default function InvoiceView() {
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Subtotal</span>
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100">{formatCurrency(editSubtotal)}</span>
             </div>
-            <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
-              <span>Tax (10%)</span>
-              <span>{formatCurrency(editSubtotal * 0.1)}</span>
-            </div>
             <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
               <span className="text-base font-semibold text-gray-800 dark:text-gray-200">Total</span>
-              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(editSubtotal * 1.1)}</span>
+              <span className="text-xl font-bold text-gray-900 dark:text-gray-100">{formatCurrency(editSubtotal)}</span>
             </div>
           </div>
         </Modal.Body>
