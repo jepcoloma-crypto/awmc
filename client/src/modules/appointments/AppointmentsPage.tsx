@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, SelectPicker, IconButton, Modal, Notification, useToaster, Tooltip, Whisper, Input, Textarea } from 'rsuite';
+import { Table, Tag, Button, SelectPicker, IconButton, Modal, Notification, useToaster, Tooltip, Whisper, Input } from 'rsuite';
 import { EyeRound, EditRound, Trash } from '@rsuite/icons';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -285,7 +285,7 @@ export default function AppointmentsPage() {
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
             Why are you cancelling the appointment for <strong>{cancelTarget?.patient_name}</strong>?
           </p>
-          <Input as="textarea" rows={3} value={cancelReason} onChange={setCancelReason} placeholder="Enter cancellation reason..." />
+          <Input as="textarea" rows={3} value={cancelReason} onChange={(v) => setCancelReason(v)} placeholder="Enter cancellation reason..." />
         </Modal.Body>
         <Modal.Footer>
           <Button appearance="primary" color="red" onClick={handleCancel} disabled={!cancelReason}>Confirm Cancel</Button>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import apiClient from '@/api/client';
-import { Table, Tag, Button, Modal, Input, Notification, useToaster, SelectPicker, IconButton, Tooltip, Whisper, NumberInput } from 'rsuite';
+import { Table, Tag, Button, Modal, Input, Notification, useToaster, SelectPicker, IconButton, Tooltip, Whisper } from 'rsuite';
 import { EditRound, Trash } from '@rsuite/icons';
 import { formatCurrency, exportCSV } from '@/lib/utils';
 
