@@ -223,7 +223,7 @@ export default function InvoiceAdd() {
               />
               <Button appearance="primary" size="sm" disabled={!patientId} onClick={() => setShowNewProc(true)}>New</Button>
               <Button appearance="ghost" size="sm" disabled={!patientId || patientDoctors.length === 0} onClick={() => setShowDocFee(true)}>Doc's Fee</Button>
-              <Button appearance="ghost" size="sm" disabled={!patientId} onClick={() => setShowMedicine(true)}>Medicine</Button>
+              <Button appearance="ghost" size="sm" disabled={!patientId} onClick={() => setShowMedicine(true)}>Other Charges</Button>
               <SelectPicker
                 data={inventory.filter((i: any) => i.quantity > 0).map((i: any) => ({ label: `${i.item_name} (${i.quantity} ${i.unit}) - ${formatCurrency(i.unit_price)}`, value: i.id }))}
                 placeholder="+ Add from Inventory"
@@ -307,11 +307,11 @@ export default function InvoiceAdd() {
       </Modal>
 
       <Modal open={showMedicine} onClose={() => setShowMedicine(false)}>
-        <Modal.Header><Modal.Title>Add Medicine</Modal.Title></Modal.Header>
+        <Modal.Header><Modal.Title>Add Other Charges</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Medicine Name</label>
+              <label className="block text-sm font-medium mb-1">Item Name</label>
               <Input value={medicineForm.name} onChange={(v) => setMedicineForm({ ...medicineForm, name: v })} placeholder="e.g. Paracetamol 500mg" />
             </div>
             <div className="grid grid-cols-2 gap-4">

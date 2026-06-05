@@ -577,7 +577,7 @@ export default function InvoiceView() {
                 + Doc's Fee
               </Button>
               <Button appearance="ghost" size="sm" onClick={() => setShowMedicineModal(true)}>
-                + Medicine
+                + Other Charges
               </Button>
               <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
               <SelectPicker
@@ -691,10 +691,10 @@ export default function InvoiceView() {
 
       {/* Medicine Modal */}
       <Modal open={showMedicineModal} onClose={() => setShowMedicineModal(false)} size="sm">
-        <Modal.Header><Modal.Title>Add Medicine Charge</Modal.Title></Modal.Header>
+        <Modal.Header><Modal.Title>Add Other Charges</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="space-y-4">
-            <FormField label="Medicine Name">
+            <FormField label="Item Name">
               <Input
                 placeholder="e.g. Paracetamol 500mg"
                 value={medicineForm.name}
@@ -726,7 +726,7 @@ export default function InvoiceView() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button appearance="primary" onClick={handleAddMedicine} disabled={!medicineForm.name || medicineForm.quantity <= 0 || medicineForm.unitPrice <= 0}>Add Medicine</Button>
+          <Button appearance="primary" onClick={handleAddMedicine} disabled={!medicineForm.name || medicineForm.quantity <= 0 || medicineForm.unitPrice <= 0}>Add Charge</Button>
           <Button appearance="default" onClick={() => setShowMedicineModal(false)}>Cancel</Button>
         </Modal.Footer>
       </Modal>
