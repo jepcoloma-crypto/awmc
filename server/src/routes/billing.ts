@@ -5,6 +5,20 @@ import { authMiddleware, requireRole, type AuthRequest } from '../middleware/aut
 
 const router = Router();
 
+// Deduct inventory quantities when invoice items match inventory item names
+async function deductInventory(items: any[], client?: any): Promise<void> {
+  const exec = client || query;
+  for (const item of items) {
+    if (!item.description) continue;
+    const qty = Math.ceil(parseFloat(item.quantity) || 1);
+    await exec(
+      `UPDATE inventory SET quantity = GREATEST(0, quantity - $1), updated_at = NOW()
+       WHERE LOWER(item_name) = LOWER($2) AND quantity >= $1`,
+      [qty, item.description]
+    );
+  }
+}
+
 function tomorrow(): string {
   const d = new Date();
   d.setDate(d.getDate() + 1);
@@ -87,6 +101,7 @@ router.post('/', authMiddleware, async (req: AuthRequest, res) => {
           [invoice.rows[0].id, item.service_id || null, item.description, item.quantity, item.unit_price, item.total]
         );
       }
+      await deductInventory(items);
     }
 
     res.status(201).json(invoice.rows[0]);
@@ -172,6 +187,8 @@ router.put('/:id', authMiddleware, async (req: AuthRequest, res) => {
           [req.params.id, item.service_id || null, item.description, item.quantity, item.unit_price, item.total]
         );
       }
+
+      await deductInventory(items, tx);
 
       const subtotal = items.reduce((s: number, i: any) => s + parseFloat(i.total), 0);
       const tax = 0;
