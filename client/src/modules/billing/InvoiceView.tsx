@@ -579,14 +579,6 @@ export default function InvoiceView() {
               <Button appearance="ghost" size="sm" onClick={() => setShowMedicineModal(true)}>
                 + Other Charges
               </Button>
-              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
-              <SelectPicker
-                data={inventory.filter((i: any) => i.quantity > 0).map((i: any) => ({ label: `${i.item_name} (${i.quantity} ${i.unit}) - ${formatCurrency(i.unit_price)}`, value: i.id }))}
-                placeholder="+ Add from Inventory"
-                onChange={(v) => { if (v) handleAddInventory(v); }}
-                style={{ minWidth: 220 }}
-                searchable
-              />
             </div>
 
             {/* Items list */}
@@ -694,13 +686,29 @@ export default function InvoiceView() {
         <Modal.Header><Modal.Title>Add Other Charges</Modal.Title></Modal.Header>
         <Modal.Body>
           <div className="space-y-4">
-            <FormField label="Item Name">
-              <Input
-                placeholder="e.g. Paracetamol 500mg"
-                value={medicineForm.name}
-                onChange={(v) => setMedicineForm({ ...medicineForm, name: v })}
+            <FormField label="Select from Inventory">
+              <SelectPicker
+                data={inventory.filter((i: any) => i.quantity > 0).map((i: any) => ({ label: `${i.item_name} (${i.quantity} ${i.unit}) - ${formatCurrency(i.unit_price)}`, value: i.id }))}
+                placeholder="Choose an inventory item..."
+                onChange={(v) => {
+                  if (!v) return;
+                  const inv = inventory.find((i: any) => i.id === v);
+                  if (inv) setMedicineForm({ name: inv.item_name, quantity: 1, unitPrice: Number(inv.unit_price) });
+                }}
+                className="w-full"
+                searchable
               />
             </FormField>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <p className="text-xs text-gray-400 mb-3">Or enter manually:</p>
+              <FormField label="Item Name">
+                <Input
+                  placeholder="e.g. Paracetamol 500mg"
+                  value={medicineForm.name}
+                  onChange={(v) => setMedicineForm({ ...medicineForm, name: v })}
+                />
+              </FormField>
+            </div>
             <FormField label="Quantity">
               <Input
                 type="number"

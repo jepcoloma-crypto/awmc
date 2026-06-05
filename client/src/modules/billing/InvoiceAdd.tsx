@@ -224,12 +224,6 @@ export default function InvoiceAdd() {
               <Button appearance="primary" size="sm" disabled={!patientId} onClick={() => setShowNewProc(true)}>New</Button>
               <Button appearance="ghost" size="sm" disabled={!patientId || patientDoctors.length === 0} onClick={() => setShowDocFee(true)}>Doc's Fee</Button>
               <Button appearance="ghost" size="sm" disabled={!patientId} onClick={() => setShowMedicine(true)}>Other Charges</Button>
-              <SelectPicker
-                data={inventory.filter((i: any) => i.quantity > 0).map((i: any) => ({ label: `${i.item_name} (${i.quantity} ${i.unit}) - ${formatCurrency(i.unit_price)}`, value: i.id }))}
-                placeholder="+ Add from Inventory"
-                onChange={(v) => { if (v) addInventoryItem(v); }}
-                className="w-60"
-              />
             </div>
           </div>
           <div className="table-responsive"><Table data={items} autoHeight rowHeight={48}>
@@ -311,8 +305,25 @@ export default function InvoiceAdd() {
         <Modal.Body>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Item Name</label>
-              <Input value={medicineForm.name} onChange={(v) => setMedicineForm({ ...medicineForm, name: v })} placeholder="e.g. Paracetamol 500mg" />
+              <label className="block text-sm font-medium mb-1">Select from Inventory</label>
+              <SelectPicker
+                data={inventory.filter((i: any) => i.quantity > 0).map((i: any) => ({ label: `${i.item_name} (${i.quantity} ${i.unit}) - ${formatCurrency(i.unit_price)}`, value: i.id }))}
+                placeholder="Choose an inventory item..."
+                onChange={(v) => {
+                  if (!v) return;
+                  const inv = inventory.find((i: any) => i.id === v);
+                  if (inv) setMedicineForm({ name: inv.item_name, quantity: 1, price: Number(inv.unit_price) });
+                }}
+                className="w-full"
+                searchable
+              />
+            </div>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+              <p className="text-xs text-gray-400 mb-3">Or enter manually:</p>
+              <div>
+                <label className="block text-sm font-medium mb-1">Item Name</label>
+                <Input value={medicineForm.name} onChange={(v) => setMedicineForm({ ...medicineForm, name: v })} placeholder="e.g. Paracetamol 500mg" />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
