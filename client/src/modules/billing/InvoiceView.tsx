@@ -551,7 +551,7 @@ export default function InvoiceView() {
             {/* Add items toolbar */}
             <div className="flex flex-wrap items-center gap-2 pb-3 border-b border-gray-200 dark:border-gray-700">
               <SelectPicker
-                data={services.map((s: any) => ({ label: `${s.name} — ${formatCurrency(s.price)}`, value: s.id }))}
+                data={services.filter((s: any) => s.status === 'Active').map((s: any) => ({ label: `${s.name} — ${formatCurrency(s.price)}`, value: s.id }))}
                 value={selectedService}
                 onChange={(v) => setSelectedService(v)}
                 placeholder="Select a service..."

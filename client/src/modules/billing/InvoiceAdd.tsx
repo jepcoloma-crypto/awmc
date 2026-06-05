@@ -199,7 +199,7 @@ export default function InvoiceAdd() {
             <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Invoice Items</h4>
             <div className="flex gap-2">
               <SelectPicker
-                data={services.map((s) => ({ label: `${s.name} - ${formatCurrency(s.price)}`, value: s.id }))}
+                data={services.filter((s) => s.status === 'Active').map((s) => ({ label: `${s.name} - ${formatCurrency(s.price)}`, value: s.id }))}
                 placeholder="+ Add service"
                 onChange={(v) => { if (v) addItem(v); }}
                 className="w-56"
