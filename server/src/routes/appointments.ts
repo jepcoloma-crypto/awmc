@@ -14,7 +14,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res) => {
         CONCAT('Dr. ', d.first_name, ' ', d.last_name) as doctor_name
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
-      JOIN doctors d ON a.doctor_id = d.id
+      LEFT JOIN doctors d ON a.doctor_id = d.id
       WHERE 1=1`;
     const params: any[] = [];
     let idx = 1;
@@ -44,26 +44,28 @@ router.post('/', authMiddleware, async (req, res) => {
     const result = await query(
       `INSERT INTO appointments (patient_id, doctor_id, appointment_date, appointment_time, end_time, status, reason, notes)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [patient_id, doctor_id, appointment_date, appointment_time, end_time, status || 'Scheduled', reason, notes || '']
+      [patient_id, doctor_id || null, appointment_date, appointment_time, end_time, status || 'Scheduled', reason, notes || '']
     );
 
-    const contact = await query(
-      `SELECT p.phone, p.email, p.first_name || ' ' || p.last_name as patient_name,
-        d.first_name || ' ' || d.last_name as doctor_name
-       FROM patients p
-       CROSS JOIN doctors d ON d.id = $2
-       WHERE p.id = $1`,
-      [patient_id, doctor_id]
-    );
+    if (doctor_id) {
+      const contact = await query(
+        `SELECT p.phone, p.email, p.first_name || ' ' || p.last_name as patient_name,
+          d.first_name || ' ' || d.last_name as doctor_name
+         FROM patients p
+         CROSS JOIN doctors d ON d.id = $2
+         WHERE p.id = $1`,
+        [patient_id, doctor_id]
+      );
 
-    if (contact.rows.length > 0) {
-      const { phone, email, patient_name, doctor_name } = contact.rows[0];
-      const dateStr = new Date(appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-      const smsMsg = `Reminder: You have an appointment at Alyssa Wellness Clinic on ${dateStr} at ${appointment_time?.slice(0, 5)} with Dr. ${doctor_name}. Please arrive on time.`;
-      const emailMsg = `Dear ${patient_name},\n\nThis is a confirmation of your appointment at Alyssa Wellness Clinic.\n\nDate: ${dateStr}\nTime: ${appointment_time?.slice(0, 5)} - ${end_time?.slice(0, 5)}\nDoctor: Dr. ${doctor_name}\nReason: ${reason || 'N/A'}\n\nThank you for choosing us.\n\nBest regards,\nAlyssa Wellness Clinic`;
+      if (contact.rows.length > 0) {
+        const { phone, email, patient_name, doctor_name } = contact.rows[0];
+        const dateStr = new Date(appointment_date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+        const smsMsg = `Reminder: You have an appointment at Alyssa Wellness Clinic on ${dateStr} at ${appointment_time?.slice(0, 5)} with Dr. ${doctor_name}. Please arrive on time.`;
+        const emailMsg = `Dear ${patient_name},\n\nThis is a confirmation of your appointment at Alyssa Wellness Clinic.\n\nDate: ${dateStr}\nTime: ${appointment_time?.slice(0, 5)} - ${end_time?.slice(0, 5)}\nDoctor: Dr. ${doctor_name}\nReason: ${reason || 'N/A'}\n\nThank you for choosing us.\n\nBest regards,\nAlyssa Wellness Clinic`;
 
-      if (phone) sendSMS(phone, smsMsg);
-      if (email) sendEmail(email, 'Appointment Confirmation - Alyssa Wellness Clinic', emailMsg);
+        if (phone) sendSMS(phone, smsMsg);
+        if (email) sendEmail(email, 'Appointment Confirmation - Alyssa Wellness Clinic', emailMsg);
+      }
     }
 
     res.status(201).json(result.rows[0]);
@@ -77,7 +79,7 @@ router.put('/:id', authMiddleware, async (req, res) => {
     const { patient_id, doctor_id, appointment_date, appointment_time, end_time, status, reason, notes } = req.body;
     const result = await query(
       `UPDATE appointments SET patient_id=$1, doctor_id=$2, appointment_date=$3, appointment_time=$4, end_time=$5, status=$6, reason=$7, notes=$8, updated_at=NOW() WHERE id=$9 RETURNING *`,
-      [patient_id, doctor_id, appointment_date, appointment_time, end_time, status, reason, notes, req.params.id]
+      [patient_id, doctor_id || null, appointment_date, appointment_time, end_time, status, reason, notes, req.params.id]
     );
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Not found' });

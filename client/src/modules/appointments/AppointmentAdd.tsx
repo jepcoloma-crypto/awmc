@@ -39,7 +39,7 @@ export default function AppointmentAdd() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (!form.patient_id || !form.doctor_id || !form.appointment_date || !form.appointment_time) {
+    if (!form.patient_id || !form.appointment_date || !form.appointment_time) {
       toaster.push(<Notification type="error" header="Error">Please fill in all required fields</Notification>, { placement: 'topEnd' });
       return;
     }
@@ -78,13 +78,14 @@ export default function AppointmentAdd() {
             />
           </FormField>
 
-          <FormField label="Doctor" required>
+          <FormField label="Doctor">
             <SelectPicker
               data={doctors.filter((d) => d.status === 'Active').map((d) => ({ label: `Dr. ${d.first_name} ${d.last_name} - ${d.specialization}`, value: d.id }))}
               value={form.doctor_id as any}
               onChange={(v) => setForm({ ...form, doctor_id: v as any })}
               className="w-full"
               disabled={isDoctor}
+              cleanable
             />
           </FormField>
 

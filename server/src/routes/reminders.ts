@@ -45,7 +45,7 @@ router.get('/today-scheduled', authMiddleware, async (req: AuthRequest, res) => 
         CONCAT('Dr. ', d.first_name, ' ', d.last_name) as doctor_name
       FROM appointments a
       JOIN patients p ON a.patient_id = p.id
-      JOIN doctors d ON a.doctor_id = d.id
+      LEFT JOIN doctors d ON a.doctor_id = d.id
       WHERE a.appointment_date = $1
         AND a.status IN ('Scheduled', 'Confirmed')
       ORDER BY a.appointment_time`;

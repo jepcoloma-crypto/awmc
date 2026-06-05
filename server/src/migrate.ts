@@ -99,6 +99,16 @@ async function migrate() {
     console.error(`✗ ${err.message}`);
   }
 
+  // Make doctor_id nullable in appointments
+  try {
+    await client.query(`
+      ALTER TABLE appointments ALTER COLUMN doctor_id DROP NOT NULL
+    `);
+    console.log('✓ Made doctor_id nullable in appointments');
+  } catch (err: any) {
+    if (!err.message.includes('does not exist')) console.error(`✗ ${err.message}`);
+  }
+
   // Ensure medical_certificates table exists (schema is in migrate.sql)
   try {
     await client.query(`

@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS patients (
 CREATE TABLE IF NOT EXISTS appointments (
   id SERIAL PRIMARY KEY,
   patient_id INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
-  doctor_id INTEGER NOT NULL REFERENCES doctors(id) ON DELETE CASCADE,
+  doctor_id INTEGER REFERENCES doctors(id) ON DELETE CASCADE,
   appointment_date DATE NOT NULL,
   appointment_time TIME NOT NULL,
   end_time TIME NOT NULL,

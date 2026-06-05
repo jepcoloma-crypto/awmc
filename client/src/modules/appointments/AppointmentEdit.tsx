@@ -70,8 +70,8 @@ export default function AppointmentEdit() {
           <FormField label="Patient" required>
             <SelectPicker data={patients.map((p) => ({ label: `${p.first_name} ${p.last_name}`, value: p.id }))} value={form.patient_id} onChange={(v) => setForm({ ...form, patient_id: v })} className="w-full" />
           </FormField>
-          <FormField label="Doctor" required>
-            <SelectPicker data={doctors.map((d) => ({ label: `Dr. ${d.first_name} ${d.last_name}`, value: d.id }))} value={form.doctor_id} onChange={(v) => setForm({ ...form, doctor_id: v })} className="w-full" />
+          <FormField label="Doctor">
+            <SelectPicker data={doctors.map((d) => ({ label: `Dr. ${d.first_name} ${d.last_name}`, value: d.id }))} value={form.doctor_id} onChange={(v) => setForm({ ...form, doctor_id: v })} className="w-full" cleanable />
           </FormField>
           <FormField label="Date" required>
             <DatePicker className="w-full" value={form.appointment_date ? new Date(form.appointment_date) : null} onChange={(v) => setForm({ ...form, appointment_date: v ? toLocalDateString(v) : '' })} oneTap />
